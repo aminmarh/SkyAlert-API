@@ -17,3 +17,10 @@ class User(db.Model):
 
     def to_dict(self):
         return {"id": self.id, "username": self.username, "email": self.email}
+
+
+class FavoriteCity(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    city = db.Column(db.String(100), nullable=False)
+    user = db.relationship("User", backref=db.backref("favorites", lazy=True))
