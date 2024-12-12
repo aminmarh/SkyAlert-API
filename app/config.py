@@ -1,0 +1,15 @@
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+class Config:
+    SECRET_KEY = os.getenv("SECRET_KEY", "supersecretkey")
+    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///weather_app.db")
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "jwtsecret")
+    WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "your_weather_api_key")
+    JWT_BLACKLIST_ENABLED = True
+    JWT_BLACKLIST_TOKEN_CHECKS = ["access"]

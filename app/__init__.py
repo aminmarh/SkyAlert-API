@@ -1,0 +1,61 @@
+from flask import Flask
+from flask_cors import CORS
+from flasgger import Swagger
+
+from app.extensions import db, jwt, migrate
+from app.routes import init_routes
+from app.config import Config
+
+
+def create_app():
+    app = Flask(__name__)
+    app.config.from_object(Config)
+
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+    swagger_config = {
+        "headers": [
+            ("Access-Control-Allow-Origin", "*"),
+            ("Access-Control-Allow-Headers", "Content-Type,Authorization"),
+            ("Access-Control-Allow-Methods", "GET,POST,DELETE,PUT,OPTIONS"),
+        ],
+        "specs": [
+            {
+                "endpoint": "apispec",
+                "route": "/apispec.json",
+                "rule_filter": lambda rule: True,
+                "model_filter": lambda tag: True,
+            }
+        ],
+        "static_url_path": "/flasgger_static",
+        "swagger_ui": True,
+        "specs_route": "/apidocs/",
+        "securityDefinitions": {
+            "Bearer": {
+                "type": "apiKey",
+                "name": "Authorization",
+                "in": "header",
+                "description": "JWT Authorization header using the Bearer scheme. Example: 'Bearer {token}'",
+            }
+        },
+        "security": [{"Bearer": []}],
+    }
+
+    template = {
+        "swagger": "2.0",
+        "info": {
+            "title": "SkyAlert API",
+            "description": "API for SkyAlert application",
+            "version": "0.0.1",
+        },
+    }
+
+    Swagger(app, template=template, config=swagger_config)
+
+    db.init_app(app)
+    jwt.init_app(app)
+    migrate.init_app(app, db)
+
+    init_routes(app)
+
+    return app
