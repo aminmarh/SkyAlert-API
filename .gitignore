@@ -44,6 +44,5 @@ docker-compose.override.yml
 
 *.min.js
 node_modules/
-.husky/
 htmlcov/
 .prettiercache
