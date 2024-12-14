@@ -1,6 +1,6 @@
 {
     "scripts": {
-        "prepare": "husky install",
+        "prepare": "husky",
         "commit": "git-cz",
         "clean": "black . && flake8 . && prettier --write \"**/*.{js,css,html,json,md}\""
     },
