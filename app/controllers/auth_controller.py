@@ -1,4 +1,5 @@
-import uuid
+import random
+import datetime
 from flask import jsonify, request
 from flask_jwt_extended import (
     create_access_token,
@@ -7,9 +8,9 @@ from flask_jwt_extended import (
     get_jwt,
 )
 from marshmallow import ValidationError
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
-from app.models.user import User
+from app.models.user import User, PasswordResetCode
 from app.extensions import db
 from app.helpers.email import Email
 from app.schemas.user_schema import (
@@ -118,7 +119,7 @@ def login():
     if not user or not user.check_password(password):
         return jsonify({"error": "Invalid credentials"}), 401
 
-    access_token = create_access_token(identity=str(user.id))
+    access_token = create_access_token(identity=str(user.id), expires_delta=None)
 
     return jsonify({"access_token": access_token, "username": user.username}), 200
 
@@ -340,7 +341,7 @@ password_reset_tokens = {}
 
 def request_password_reset():
     """
-    Request a password reset
+    Demander un code de réinitialisation de mot de passe.
     ---
     tags:
       - Authentification
@@ -354,24 +355,32 @@ def request_password_reset():
             email:
               type: string
               description: User's email address
-              example: "user@example.com"
+              example: "testuser@example.com"
     responses:
       200:
-        description: Reset email sent successfully
+        description: Reset code sent successfully
         schema:
           type: object
           properties:
             message:
               type: string
-              example: Password reset email sent
+              example: "Reset code sent successfully"
       404:
-        description: User not found
+        description: Email does not exist in the database
         schema:
           type: object
           properties:
             error:
               type: string
-              example: User not found
+              example: "Email not found"
+      500:
+        description: Error sending email
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: "Failed to send email: SMTP Error"
     """
     data = request.json
     email = data.get("email")
@@ -380,54 +389,191 @@ def request_password_reset():
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    token = str(uuid.uuid4())
-    password_reset_tokens[token] = user.id
-    reset_link = f"http://localhost:5000/auth/user/reset-password/{token}"
+    code = f"{random.randint(100000, 999999)}"
+
+    reset_code = PasswordResetCode(email=email, code=code)
+    db.session.add(reset_code)
+    db.session.commit()
+
     email_body = (
         "Bonjour,\n\n"
         "Vous avez demandé une réinitialisation de votre mot de passe pour votre compte SkyAlert.\n"
         "Si vous êtes bien à l'origine de cette demande,"
-        "veuillez cliquer sur le lien ci-dessous pour réinitialiser votre mot de passe :\n"
-        f"{reset_link}\n"
+        "votre code de réinitialisation de mot de passe est :\n"
+        f"{code}\n"
         "Si vous n'avez pas demandé cette réinitialisation, veuillez ignorer ce message.\n"
-        "Pour votre sécurité, ce lien expirera dans 24 heures.\n\n"
+        "Pour votre sécurité, ce lien expirera dans 15 minutes.\n\n"
         "Ceci est un e-mail automatique, veuillez ne pas y répondre.\n\n"
         "Cordialement,\n"
         "L'équipe SkyAlert"
     )
 
-    Email.send_email(
-        to=email,
-        subject="SkyAlert - Demande de réinitialisation de mot de passe",
-        body=email_body,
-    )
+    try:
+        Email.send_email(
+            to=email,
+            subject="SkyAlert - Demande de réinitialisation de mot de passe",
+            body=email_body,
+        )
+    except Exception as e:
+        return jsonify({"error": f"Failed to send email: {str(e)}"}), 500
 
     return jsonify({"message": "Password reset email sent"}), 200
 
 
-def reset_password(token):
+def verify_reset_code():
     """
-    Reset user password
+    Vérifier un code de réinitialisation de mot de passe.
     ---
     tags:
       - Authentification
     parameters:
-      - name: token
-        in: path
-        required: true
-        type: string
-        description: Unique token sent in reset link
-        example: "123e4567-e89b-12d3-a456-426614174000"
       - name: body
         in: body
         required: true
         schema:
           type: object
           properties:
+            email:
+              type: string
+              description: The email of the user who received the code
+              example: "testuser@example.com"
+            code:
+              type: string
+              description: The 6-digit reset code
+              example: "123456"
+    responses:
+      200:
+        description: Code verified successfully
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+              example: "Code verified successfully"
+      400:
+        description: Invalid or expired code
+        schema:
+          type: object
+          properties:
+            error:
+              type: string
+              example: "Invalid or expired code"
+    """
+    data = request.json
+    email = data.get("email")
+    code = data.get("code")
+
+    reset_code = PasswordResetCode.query.filter_by(
+        email=email, code=code, is_used=False
+    ).first()
+    if not reset_code:
+        return jsonify({"error": "Invalid or expired code"}), 400
+
+    time_elapsed = datetime.datetime.utcnow() - reset_code.created_at
+    if time_elapsed.total_seconds() > 900:
+        return jsonify({"error": "Code expired"}), 400
+
+    return jsonify({"message": "Code verified successfully"}), 200
+
+
+# def reset_password(token):
+#     """
+#     Reset user password
+#     ---
+#     tags:
+#       - Authentification
+#     parameters:
+#       - name: token
+#         in: path
+#         required: true
+#         type: string
+#         description: Unique token sent in reset link
+#         example: "123e4567-e89b-12d3-a456-426614174000"
+#       - name: body
+#         in: body
+#         required: true
+#         schema:
+#           type: object
+#           properties:
+#             new_password:
+#               type: string
+#               description: New User Password
+#               example: "new_secure_password"
+#     responses:
+#       200:
+#         description: Password reset successfully
+#         schema:
+#           type: object
+#           properties:
+#             message:
+#               type: string
+#               example: Password reset successfully
+#       400:
+#         description: Invalid or expired token, or missing password
+#         schema:
+#           type: object
+#           properties:
+#             error:
+#               type: string
+#               example: Invalid or expired token
+#       404:
+#         description: User not found
+#         schema:
+#           type: object
+#           properties:
+#             error:
+#               type: string
+#               example: User not found
+#     """
+#     user_id = password_reset_tokens.get(token)
+
+#     if not user_id:
+#         return jsonify({"error": "Invalid or expired token"}), 400
+
+#     user = User.query.get(user_id)
+
+#     if not user:
+#         return jsonify({"error": "User not found"}), 404
+
+#     data = request.json
+#     new_password = data.get("new_password")
+
+#     if not new_password:
+#         return jsonify({"error": "New password is required"}), 400
+
+#     user.set_password(new_password)
+#     db.session.commit()
+
+#     del password_reset_tokens[token]
+
+#     return jsonify({"message": "Password reset successfully"}), 200
+
+
+def reset_password():
+    """
+    Réinitialiser le mot de passe d'un utilisateur.
+    ---
+    tags:
+      - Authentification
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            email:
+              type: string
+              description: The email of the user who requested the reset
+              example: "testuser@example.com"
+            code:
+              type: string
+              description: The 6-digit reset code
+              example: "123456"
             new_password:
               type: string
-              description: New User Password
-              example: "new_secure_password"
+              description: The user's new password
+              example: "newpassword123"
     responses:
       200:
         description: Password reset successfully
@@ -436,15 +582,15 @@ def reset_password(token):
           properties:
             message:
               type: string
-              example: Password reset successfully
+              example: "Password reset successfully"
       400:
-        description: Invalid or expired token, or missing password
+        description: Invalid or expired code
         schema:
           type: object
           properties:
             error:
               type: string
-              example: Invalid or expired token
+              example: "Invalid or expired code"
       404:
         description: User not found
         schema:
@@ -452,27 +598,27 @@ def reset_password(token):
           properties:
             error:
               type: string
-              example: User not found
+              example: "User not found"
     """
-    user_id = password_reset_tokens.get(token)
+    data = request.json
+    email = data.get("email")
+    code = data.get("code")
+    new_password = data.get("new_password")
 
-    if not user_id:
-        return jsonify({"error": "Invalid or expired token"}), 400
+    reset_code = PasswordResetCode.query.filter_by(
+        email=email, code=code, is_used=False
+    ).first()
+    if not reset_code:
+        return jsonify({"error": "Invalid or expired code"}), 400
 
-    user = User.query.get(user_id)
-
+    user = User.query.filter_by(email=email).first()
     if not user:
         return jsonify({"error": "User not found"}), 404
 
-    data = request.json
-    new_password = data.get("new_password")
-
-    if not new_password:
-        return jsonify({"error": "New password is required"}), 400
-
-    user.set_password(new_password)
+    user.password_hash = generate_password_hash(new_password)
     db.session.commit()
 
-    del password_reset_tokens[token]
+    reset_code.is_used = True
+    db.session.commit()
 
     return jsonify({"message": "Password reset successfully"}), 200
