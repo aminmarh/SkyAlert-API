@@ -7,6 +7,7 @@ from app.controllers.auth_controller import (
     update_user,
     update_password,
     request_password_reset,
+    verify_reset_code,
     reset_password,
 )
 
@@ -20,6 +21,9 @@ auth_bp.add_url_rule(
     "/password/reset-request", view_func=request_password_reset, methods=["POST"]
 )
 auth_bp.add_url_rule(
-    "/password/reset/<token>", view_func=reset_password, methods=["POST"]
+    "/password/verify-reset-code", view_func=verify_reset_code, methods=["POST"]
+)
+auth_bp.add_url_rule(
+    "/password/reset-password", view_func=reset_password, methods=["POST"]
 )
 auth_bp.add_url_rule("/logout", view_func=logout, methods=["POST"])
