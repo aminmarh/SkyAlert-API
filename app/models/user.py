@@ -41,6 +41,25 @@ class FavoriteCity(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     city = db.Column(db.String(100), nullable=False)
 
+    storm_thresholds = db.relationship(
+        "StormThreshold",
+        backref="favorite_city",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+    heatwave_thresholds = db.relationship(
+        "HeatwaveThreshold",
+        backref="favorite_city",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+    flood_thresholds = db.relationship(
+        "FloodThreshold",
+        backref="favorite_city",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+
 
 class PasswordResetCode(db.Model):
     __tablename__ = "password_reset_code"
@@ -50,3 +69,38 @@ class PasswordResetCode(db.Model):
     code = db.Column(db.String(6), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
     is_used = db.Column(db.Boolean, default=False)
+
+
+class StormThreshold(db.Model):
+    __tablename__ = "storm_threshold"
+
+    id = db.Column(db.Integer, primary_key=True)
+    favorite_city_id = db.Column(
+        db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
+    )
+    wind_speed = db.Column(db.Float, nullable=False)
+    gust_speed = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+
+class HeatwaveThreshold(db.Model):
+    __tablename__ = "heatwave_threshold"
+
+    id = db.Column(db.Integer, primary_key=True)
+    favorite_city_id = db.Column(
+        db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
+    )
+    temperature = db.Column(db.Float, nullable=False)
+    humidity = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
+
+
+class FloodThreshold(db.Model):
+    __tablename__ = "flood_threshold"
+
+    id = db.Column(db.Integer, primary_key=True)
+    favorite_city_id = db.Column(
+        db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
+    )
+    precipitation = db.Column(db.Float, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
