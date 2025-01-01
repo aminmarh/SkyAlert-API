@@ -12,6 +12,7 @@ class User(db.Model):
     username = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    preferences = db.Column(db.String(20), default="metric")
 
     favorites = db.relationship(
         "FavoriteCity",
@@ -31,6 +32,7 @@ class User(db.Model):
             "id": self.id,
             "username": self.username,
             "email": self.email,
+            "preferences": self.preferences,
         }
 
 
@@ -78,8 +80,10 @@ class StormThreshold(db.Model):
     favorite_city_id = db.Column(
         db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
     )
-    wind_speed = db.Column(db.Float, nullable=False)
-    gust_speed = db.Column(db.Float, nullable=False)
+    wind_speed_metric = db.Column(db.Float, nullable=False)
+    wind_speed_imperial = db.Column(db.Float, nullable=False)
+    gust_speed_metric = db.Column(db.Float, nullable=False)
+    gust_speed_imperial = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
@@ -90,7 +94,8 @@ class HeatwaveThreshold(db.Model):
     favorite_city_id = db.Column(
         db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
     )
-    temperature = db.Column(db.Float, nullable=False)
+    temperature_metric = db.Column(db.Float, nullable=False)
+    temperature_imperial = db.Column(db.Float, nullable=False)
     humidity = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
@@ -102,7 +107,8 @@ class FloodThreshold(db.Model):
     favorite_city_id = db.Column(
         db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
     )
-    precipitation = db.Column(db.Float, nullable=False)
+    precipitation_metric = db.Column(db.Float, nullable=False)
+    precipitation_imperial = db.Column(db.Float, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 

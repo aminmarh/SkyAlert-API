@@ -1,9 +1,11 @@
 from flask import jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
 from app.extensions import db
+from app.helpers.generic_helper import convert_units
 from app.models.user import (
+    User,
     FavoriteCity,
     StormThreshold,
     HeatwaveThreshold,
@@ -61,17 +63,22 @@ def create_storm_threshold():
                 favorite_city_id:
                   type: integer
                   example: 1
-                wind_speed:
+                wind_speed_metric:
                   type: float
                   example: 70.0
-                gust_speed:
+                gust_speed_metric:
                   type: float
                   example: 100.0
+                wind_speed_imperial:
+                  type: float
+                  example: 43.496
+                gust_speed_imperial:
+                  type: float
+                  example: 62.1371
             message:
               type: string
               example: Storm threshold created successfully
       400:
-        description: Validation failed
         schema:
           type: object
           properties:
@@ -88,7 +95,6 @@ def create_storm_threshold():
               type: object
               example: {"wind_speed": ["Not a valid number"]}
       404:
-        description: Favorite city not found
         schema:
           type: object
           properties:
@@ -102,6 +108,7 @@ def create_storm_threshold():
               type: string
               example: Favorite city not found
     """
+    user = User.query.get(get_jwt_identity())
     data = request.json
 
     try:
@@ -131,10 +138,33 @@ def create_storm_threshold():
             404,
         )
 
+    user_units = user.preferences
+
+    if user_units == "metric":
+        wind_speed_imperial = convert_units(
+            wind_speed, "metric", "imperial", "wind_speed"
+        )
+        gust_speed_imperial = convert_units(
+            gust_speed, "metric", "imperial", "wind_speed"
+        )
+        wind_speed_metric = wind_speed
+        gust_speed_metric = gust_speed
+    else:
+        wind_speed_metric = convert_units(
+            wind_speed, "imperial", "metric", "wind_speed"
+        )
+        gust_speed_metric = convert_units(
+            gust_speed, "imperial", "metric", "wind_speed"
+        )
+        wind_speed_imperial = wind_speed
+        gust_speed_imperial = gust_speed
+
     threshold = StormThreshold(
         favorite_city_id=favorite_city_id,
-        wind_speed=wind_speed,
-        gust_speed=gust_speed,
+        wind_speed_metric=wind_speed_metric,
+        wind_speed_imperial=wind_speed_imperial,
+        gust_speed_metric=gust_speed_metric,
+        gust_speed_imperial=gust_speed_imperial,
     )
     db.session.add(threshold)
     db.session.commit()
@@ -145,8 +175,10 @@ def create_storm_threshold():
                 "status": "success",
                 "data": {
                     "favorite_city_id": favorite_city_id,
-                    "wind_speed": wind_speed,
-                    "gust_speed": gust_speed,
+                    "wind_speed_metric": wind_speed_metric,
+                    "gust_speed_metric": gust_speed_metric,
+                    "wind_speed_imperial": wind_speed_imperial,
+                    "gust_speed_imperial": gust_speed_imperial,
                 },
                 "message": "Storm threshold created successfully",
             }
@@ -193,9 +225,12 @@ def create_flood_threshold():
                 favorite_city_id:
                   type: integer
                   example: 1
-                precipitation:
+                precipitation_metric:
                   type: float
                   example: 50.0
+                precipitation_imperial:
+                  type: float
+                  example: 1.9685
             message:
               type: string
               example: Flood threshold created successfully
@@ -229,6 +264,7 @@ def create_flood_threshold():
               type: string
               example: Favorite city not found
     """
+    user = User.query.get(get_jwt_identity())
     data = request.json
 
     try:
@@ -258,8 +294,23 @@ def create_flood_threshold():
             404,
         )
 
+    user_units = user.preferences
+
+    if user_units == "metric":
+        precipitation_imperial = convert_units(
+            precipitation, "metric", "imperial", "precipitation"
+        )
+        precipitation_metric = precipitation
+    else:
+        precipitation_metric = convert_units(
+            precipitation, "imperial", "metric", "precipitation"
+        )
+        precipitation_imperial = precipitation
+
     threshold = FloodThreshold(
-        favorite_city_id=favorite_city_id, precipitation=precipitation
+        favorite_city_id=favorite_city_id,
+        precipitation_metric=precipitation_metric,
+        precipitation_imperial=precipitation_imperial,
     )
     db.session.add(threshold)
     db.session.commit()
@@ -270,7 +321,8 @@ def create_flood_threshold():
                 "status": "success",
                 "data": {
                     "favorite_city_id": favorite_city_id,
-                    "precipitation": precipitation,
+                    "precipitation_metric": precipitation_metric,
+                    "precipitation_imperial": precipitation_imperial,
                 },
                 "message": "Flood threshold created successfully",
             }
@@ -321,9 +373,12 @@ def create_heatwave_threshold():
                 favorite_city_id:
                   type: integer
                   example: 1
-                temperature:
+                temperature_metric:
                   type: float
                   example: 35.0
+                temperature_imperial:
+                  type: float
+                  example: 95.0
                 humidity:
                   type: float
                   example: 80.0
@@ -360,6 +415,7 @@ def create_heatwave_threshold():
               type: string
               example: Favorite city not found
     """
+    user = User.query.get(get_jwt_identity())
     data = request.json
 
     try:
@@ -390,9 +446,23 @@ def create_heatwave_threshold():
             404,
         )
 
+    user_units = user.preferences
+
+    if user_units == "metric":
+        temperature_imperial = convert_units(
+            temperature, "metric", "imperial", "temperature"
+        )
+        temperature_metric = temperature
+    else:
+        temperature_metric = convert_units(
+            temperature, "imperial", "metric", "temperature"
+        )
+        temperature_imperial = temperature
+
     threshold = HeatwaveThreshold(
         favorite_city_id=favorite_city_id,
-        temperature=temperature,
+        temperature_metric=temperature_metric,
+        temperature_imperial=temperature_imperial,
         humidity=humidity,
     )
     db.session.add(threshold)
@@ -404,7 +474,8 @@ def create_heatwave_threshold():
                 "status": "success",
                 "data": {
                     "favorite_city_id": favorite_city_id,
-                    "temperature": temperature,
+                    "temperature_metric": temperature_metric,
+                    "temperature_imperial": temperature_imperial,
                     "humidity": humidity,
                 },
                 "message": "HeatWave threshold created successfully",
@@ -687,7 +758,9 @@ def get_thresholds():
               type: string
               example: "Favorite city not found"
     """
+    user = User.query.get(get_jwt_identity())
     data = request.json
+
     try:
         validated_data = GetThresholdSchema().load(data)
     except ValidationError as err:
@@ -718,12 +791,22 @@ def get_thresholds():
             404,
         )
 
+    user_units = user.preferences
+
     thresholds = {
         "storm": [
             {
                 "id": t.id,
-                "wind_speed": t.wind_speed,
-                "gust_speed": t.gust_speed,
+                "wind_speed": (
+                    t.wind_speed_imperial
+                    if user_units == "imperial"
+                    else t.wind_speed_metric
+                ),
+                "gust_speed": (
+                    t.gust_speed_imperial
+                    if user_units == "imperial"
+                    else t.gust_speed_metric
+                ),
                 "created_at": t.created_at.isoformat(),
             }
             for t in favorite_city.storm_thresholds
@@ -731,7 +814,11 @@ def get_thresholds():
         "heatwave": [
             {
                 "id": t.id,
-                "temperature": t.temperature,
+                "temperature": (
+                    t.temperature_imperial
+                    if user_units == "imperial"
+                    else t.temperature_metric
+                ),
                 "humidity": t.humidity,
                 "created_at": t.created_at.isoformat(),
             }
@@ -740,7 +827,11 @@ def get_thresholds():
         "flood": [
             {
                 "id": t.id,
-                "precipitation": t.precipitation,
+                "precipitation": (
+                    t.precipitation_imperial
+                    if user_units == "imperial"
+                    else t.precipitation_metric
+                ),
                 "created_at": t.created_at.isoformat(),
             }
             for t in favorite_city.flood_thresholds
