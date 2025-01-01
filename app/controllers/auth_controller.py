@@ -348,6 +348,10 @@ def update_user():
               type: string
               description: New email address
               example: new_email@example.com
+            preferences:
+              type: string
+              description: User preferences for units (metric or imperial)
+              example: metric
     responses:
       200:
         schema:
@@ -368,6 +372,9 @@ def update_user():
                 email:
                   type: string
                   example: "new_email@example.com"
+                preferences:
+                  type: string
+                  example: "metric"
       400:
         schema:
           type: object
@@ -443,6 +450,13 @@ def update_user():
         user.username = validated_data["username"]
         changes_detected = True
 
+    if (
+        "preferences" in validated_data
+        and validated_data["preferences"] != user.preferences
+    ):
+        user.preferences = validated_data["preferences"]
+        changes_detected = True
+
     if "email" in validated_data and validated_data["email"] != user.email:
         # Check if email is already in use
         if User.query.filter(
@@ -480,6 +494,7 @@ def update_user():
                         "id": user.id,
                         "username": user.username,
                         "email": user.email,
+                        "preferences": user.preferences,
                     }
                 },
                 "message": "User updated successfully",
