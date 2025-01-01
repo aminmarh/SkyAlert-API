@@ -19,34 +19,34 @@ class ThresholdType(fields.Str):
         super().__init__(*args, **kwargs)
 
 
-class PositiveFloatType(fields.Float):
+class PositiveIntType(fields.Int):
     def __init__(self, *args, **kwargs):
         kwargs["validate"] = validate.Range(
             min=0, error="Value must be a positive number"
         )
-        kwargs["description"] = kwargs.get("description", "Positive float value")
+        kwargs["description"] = kwargs.get("description", "Positive Int value")
         super().__init__(*args, **kwargs)
 
 
 class StormSchema(Schema):
     favorite_city_id = CityIDType(required=True)
-    gust_speed = PositiveFloatType(required=True, description="Gust speed of the storm")
-    wind_speed = PositiveFloatType(required=True, description="Wind speed of the storm")
+    gust_speed = PositiveIntType(required=True, description="Gust speed of the storm")
+    wind_speed = PositiveIntType(required=True, description="Wind speed of the storm")
 
 
 class HeatwaveSchema(Schema):
     favorite_city_id = CityIDType(required=True)
-    temperature = PositiveFloatType(
+    temperature = PositiveIntType(
         required=True, description="Temperature during the heatwave"
     )
-    humidity = PositiveFloatType(
+    humidity = PositiveIntType(
         required=True, description="Humidity during the heatwave"
     )
 
 
 class FloodSchema(Schema):
     favorite_city_id = CityIDType(required=True)
-    precipitation = PositiveFloatType(
+    precipitation = PositiveIntType(
         required=True, description="Precipitation level during the flood"
     )
 

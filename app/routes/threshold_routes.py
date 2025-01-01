@@ -5,6 +5,7 @@ from app.controllers.threshold_controller import (
     create_heatwave_threshold,
     delete_threshold,
     get_thresholds,
+    get_cities_with_thresholds,
 )
 
 threshold_bp = Blueprint("threshold", __name__)
@@ -16,3 +17,6 @@ threshold_bp.add_url_rule(
 )
 threshold_bp.add_url_rule("/delete", view_func=delete_threshold, methods=["DELETE"])
 threshold_bp.add_url_rule("", view_func=get_thresholds, methods=["POST"])
+threshold_bp.add_url_rule(
+    "/cities", view_func=get_cities_with_thresholds, methods=["GET"]
+)
