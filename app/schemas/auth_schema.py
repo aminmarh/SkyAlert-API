@@ -49,6 +49,18 @@ class CodeType(fields.Str):
         super().__init__(*args, **kwargs)
 
 
+class PreferencesType(fields.Str):
+    def __init__(self, *args, **kwargs):
+        kwargs["validate"] = validate.OneOf(
+            ["metric", "imperial"],
+            error="Preferences must be either 'metric' or 'imperial'",
+        )
+        kwargs["description"] = (
+            "User preferences for measurement units (metric or imperial)"
+        )
+        super().__init__(*args, **kwargs)
+
+
 class RegisterSchema(Schema):
     username = UsernameType(required=True)
     email = EmailType(required=True)
@@ -63,6 +75,7 @@ class LoginSchema(Schema):
 class UserUpdateSchema(Schema):
     username = UsernameType(required=False)
     email = EmailType(required=False)
+    preferences = PreferencesType(required=True)
 
 
 class PasswordUpdateSchema(Schema):
