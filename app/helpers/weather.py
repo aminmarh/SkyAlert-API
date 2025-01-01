@@ -79,6 +79,26 @@ class WeatherAPI:
         }
 
     @staticmethod
+    def location_search(query):
+        api_key = current_app.config.get("WEATHER_API_KEY")
+        url = f"{WeatherAPI.BASE_URL}/search.json"
+        params = {"key": api_key, "q": query}
+        response = requests.get(url, params=params)
+
+        if response.status_code == 200:
+            return response.json()
+
+        error_messages = {
+            401: "Invalid API key",
+            404: f"Query '{query}' not found",
+        }
+        return {
+            "error": error_messages.get(
+                response.status_code, "Unable to fetch forecast data."
+            )
+        }
+
+    @staticmethod
     def filter_units(data, system="metric"):
         """
         Filters the weather data to include only the relevant unit system,
