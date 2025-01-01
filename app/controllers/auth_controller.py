@@ -1090,3 +1090,85 @@ def get_user_info():
         ),
         200,
     )
+
+
+@jwt_required()
+def delete_account():
+    """
+    Supprimer le compte utilisateur.
+    ---
+    tags:
+      - Authentification
+    security:
+      - Bearer: []
+    responses:
+      200:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "success"
+            data:
+              type: object
+              properties:
+                id:
+                  type: integer
+                  example: 1
+                username:
+                  type: string
+                  example: "testuser"
+                email:
+                  type: string
+                  example: "testuser@example.com"
+                preferences:
+                  type: string
+                  example: "metric"
+            message:
+              type: string
+              example: "User account deleted successfully"
+      404:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "User not found"
+    """
+    user_id = get_jwt_identity()
+
+    user = User.query.get(user_id)
+    if not user:
+        return (
+            jsonify({"status": "error", "data": None, "message": "User not found"}),
+            404,
+        )
+
+    jti = get_jwt()["jti"]
+    expires_at = datetime.datetime.fromtimestamp(get_jwt()["exp"])
+    add_token_to_blacklist(jti, expires_at)
+
+    db.session.delete(user)
+    db.session.commit()
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": {
+                    "id": user.id,
+                    "username": user.username,
+                    "email": user.email,
+                    "preferences": user.preferences,
+                },
+                "message": "User account deleted successfully",
+            }
+        ),
+        200,
+    )
