@@ -26,3 +26,7 @@ class PositiveIntType(fields.Int):
 class WeatherRequestSchema(Schema):
     city = CityNameType(required=True)
     days = PositiveIntType(required=True)
+
+
+class SearchLocationSchema(Schema):
+    query = CityNameType(required=True)
