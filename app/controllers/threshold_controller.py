@@ -138,10 +138,21 @@ def create_storm_threshold():
             404,
         )
 
-    existing_threshold = StormThreshold.query.filter_by(
-        favorite_city_id=favorite_city_id,
-        wind_speed_metric=wind_speed,
-        gust_speed_metric=gust_speed,
+    user_units = user.preferences
+
+    existing_threshold = StormThreshold.query.filter(
+        StormThreshold.favorite_city_id == favorite_city_id,
+        (
+            (
+                StormThreshold.wind_speed_metric == wind_speed
+                and StormThreshold.gust_speed_metric == gust_speed
+            )
+            if user_units == "metric"
+            else (
+                StormThreshold.wind_speed_imperial == wind_speed
+                and StormThreshold.gust_speed_imperial == gust_speed
+            )
+        ),
     ).first()
 
     if existing_threshold:
@@ -155,8 +166,6 @@ def create_storm_threshold():
             ),
             400,
         )
-
-    user_units = user.preferences
 
     if user_units == "metric":
         wind_speed_imperial = convert_units(
@@ -314,6 +323,27 @@ def create_flood_threshold():
 
     user_units = user.preferences
 
+    existing_threshold = FloodThreshold.query.filter(
+        FloodThreshold.favorite_city_id == favorite_city_id,
+        (
+            (FloodThreshold.precipitation_metric == precipitation)
+            if user_units == "metric"
+            else (FloodThreshold.precipitation_imperial == precipitation)
+        ),
+    ).first()
+
+    if existing_threshold:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "A flood threshold with the same values already exists for this city",
+                }
+            ),
+            400,
+        )
+
     if user_units == "metric":
         precipitation_imperial = convert_units(
             precipitation, "metric", "imperial", "precipitation"
@@ -465,6 +495,33 @@ def create_heatwave_threshold():
         )
 
     user_units = user.preferences
+
+    existing_threshold = HeatwaveThreshold.query.filter(
+        HeatwaveThreshold.favorite_city_id == favorite_city_id,
+        (
+            (
+                HeatwaveThreshold.temperature_metric == temperature
+                and HeatwaveThreshold.humidity == humidity
+            )
+            if user_units == "metric"
+            else (
+                HeatwaveThreshold.temperature_imperial == temperature
+                and HeatwaveThreshold.humidity == humidity
+            )
+        ),
+    ).first()
+
+    if existing_threshold:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "A heatwave threshold with the same values already exists for this city",
+                }
+            ),
+            400,
+        )
 
     if user_units == "metric":
         temperature_imperial = convert_units(
