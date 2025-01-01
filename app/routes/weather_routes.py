@@ -5,4 +5,4 @@ from app.controllers.weather_controller import (
 
 weather_bp = Blueprint("weather", __name__)
 
-weather_bp.add_url_rule("/forecast", view_func=get_forecast, methods=["GET"])
+weather_bp.add_url_rule("/forecast", view_func=get_forecast, methods=["POST"])

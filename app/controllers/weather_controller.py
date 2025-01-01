@@ -1,69 +1,103 @@
 from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
+from marshmallow.exceptions import ValidationError
 
 from app.helpers.weather import WeatherAPI
 from app.models.user import User
+from app.schemas.weather_schema import WeatherRequestSchema
 
 
 @jwt_required()
 def get_forecast():
     """
-    Weather forecast for a city.
+    Météo pour une ville.
     ---
     tags:
       - Weather
     security:
       - Bearer: []
     parameters:
-      - name: city
-        in: query
+      - name: body
+        in: body
         required: true
-        type: string
-        description: Name of the city
-        default: Paris
-        example: Paris
-      - name: days
-        in: query
-        required: true
-        type: integer
-        description: Number of days of weather forecast. Value ranges from 1 to 14
-        default: 1
-        example: 5
-      - name: aqi
-        in: query
-        required: false
-        type: string
-        description: Enable/Disable Air Quality data in forecast API output. Example, aqi=yes or aqi=no.
-        default: "no"
-        example: aqui
-      - name: alerts
-        in: query
-        required: false
-        type: string
-        description: Enable/Disable alerts in forecast API output. Example, alerts=yes or alerts=no.
-        default: "no"
-        example: alerts
+        schema:
+          type: object
+          properties:
+            city:
+              type: string
+              description: Name of the city
+              default: Paris
+              example: Paris
+            days:
+              type: integer
+              description: Number of days of weather forecast. Value ranges from 1 to 3
+              default: 1
+              example: 3
     responses:
       200:
-        description: Weather forecast data
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            data:
+              type: object
+              properties:
+                current:
+                  type: array
+                forecast:
+                  type: array
+                location:
+                  type: array
+            message:
+              type: string
+              example: Weather forecast for Paris retrieved successfully
       400:
-        description: Missing city parameter
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Validation failed"
+            errors:
+              type: object
+              example: {"city": ["City name must be a string containing only letters and spaces"]}
     """
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
     preferences = user.preferences if user else "metric"
 
-    city = request.args.get("city")
-    days = request.args.get("days", 3)
-    aqi = request.args.get("aqi", "no")
-    alerts = request.args.get("alerts", "no")
+    data = request.json
 
-    if not city:
-        return jsonify({"error": "City parameter is required"}), 400
+    try:
+        validated_data = WeatherRequestSchema().load(data)
+    except ValidationError as err:
+        return {
+            "status": "error",
+            "data": None,
+            "message": "Validation failed",
+            "errors": err.messages,
+        }, 400
 
-    forecast_data = WeatherAPI.get_forecast(city, days, aqi, alerts, preferences)
+    city = validated_data["city"]
+    days = validated_data["days"]
 
-    if "error" in forecast_data:
-        return jsonify({"error": forecast_data["error"]}), 400
+    forecast = WeatherAPI.get_forecast(city, days, preferences)
 
-    return jsonify(forecast_data)
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": forecast,
+                "message": f"Weather forecast for {city} retrieved successfully",
+            }
+        ),
+        200,
+    )

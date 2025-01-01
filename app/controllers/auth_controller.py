@@ -1031,6 +1031,9 @@ def get_user_info():
                 email:
                   type: string
                   example: "testuser@example.com"
+                preferences:
+                  type: string
+                  example: "metric"
             message:
               type: string
               example: "User information retrieved successfully"
