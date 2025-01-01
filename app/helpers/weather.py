@@ -5,68 +5,112 @@ from flask import current_app
 class WeatherAPI:
     BASE_URL = "http://api.weatherapi.com/v1"
 
+    METRIC_FIELDS = [
+        "temp_c",
+        "wind_kph",
+        "pressure_mb",
+        "precip_mm",
+        "feelslike_c",
+        "vis_km",
+        "gust_kph",
+        "windchill_c",
+        "heatindex_c",
+        "dewpoint_c",
+        "maxtemp_c",
+        "mintemp_c",
+        "avgtemp_c",
+        "totalprecip_mm",
+        "avgvis_km",
+        "snow_cm",
+    ]
+
+    IMPERIAL_FIELDS = [
+        "temp_f",
+        "wind_mph",
+        "pressure_in",
+        "precip_in",
+        "feelslike_f",
+        "vis_miles",
+        "gust_mph",
+        "windchill_f",
+        "heatindex_f",
+        "dewpoint_f",
+        "maxtemp_f",
+        "mintemp_f",
+        "avgtemp_f",
+        "totalprecip_in",
+        "avgvis_miles",
+    ]
+
+    UNIVERSAL_FIELDS = [
+        "last_updated",
+        "is_day",
+        "condition",
+        "wind_degree",
+        "wind_dir",
+        "humidity",
+        "cloud",
+        "date",
+        "avghumidity",
+        "time",
+    ]
+
     @staticmethod
-    def get_forecast(city, days, aqi, alerts, preferences):
+    def get_forecast(city, days, preferences):
         api_key = current_app.config.get("WEATHER_API_KEY")
         url = f"{WeatherAPI.BASE_URL}/forecast.json"
-        params = {"key": api_key, "q": city, "days": days, "aqi": aqi, "alerts": alerts}
+        params = {"key": api_key, "q": city, "days": days}
         response = requests.get(url, params=params)
 
         if response.status_code == 200:
             data = response.json()
-            if preferences.lower() == "imperial":
-                data = WeatherAPI.filter_units(data, system="imperial")
-            else:
-                data = WeatherAPI.filter_units(data, system="metric")
+            system = "imperial" if preferences.lower() == "imperial" else "metric"
+            data = WeatherAPI.filter_units(data, system=system)
             return data
-        return {"error": "Unable to fetch forecast data"}
+
+        error_messages = {
+            401: "Invalid API key",
+            404: f"City '{city}' not found",
+        }
+        return {
+            "error": error_messages.get(
+                response.status_code, "Unable to fetch forecast data."
+            )
+        }
 
     @staticmethod
     def filter_units(data, system="metric"):
         """
-        Filter the weather data based on the unit system.
+        Filters the weather data to include only the relevant unit system,
+        rounds numeric values, and preserves universal fields.
         """
-        metric_fields = [
-            "temp_c",
-            "wind_kph",
-            "gust_kph",
-            "pressure_mb",
-            "precip_mm",
-            "vis_km",
-            "snow_cm",
-            "dewpoint_c",
-            "feelslike_c",
-            "heatindex_c",
-            "windchill_c",
-        ]
-        imperial_fields = [
-            "temp_f",
-            "wind_mph",
-            "gust_mph",
-            "pressure_in",
-            "precip_in",
-            "vis_miles",
-            "snow_in",
-            "dewpoint_f",
-            "feelslike_f",
-            "heatindex_f",
-            "windchill_f",
-        ]
-
-        keep_fields = metric_fields if system == "metric" else imperial_fields
+        keep_fields = set(
+            WeatherAPI.METRIC_FIELDS
+            if system == "metric"
+            else WeatherAPI.IMPERIAL_FIELDS
+        ).union(WeatherAPI.UNIVERSAL_FIELDS)
 
         def filter_obj(obj):
             for field in list(obj.keys()):
-                if field not in keep_fields and not isinstance(obj[field], dict):
+                if field in keep_fields:
+                    # Round numeric fields if needed
+                    if isinstance(obj[field], (float, int)):
+                        obj[field] = round(obj[field], 1)
+                else:
+                    # Remove fields not in keep_fields
                     obj.pop(field, None)
 
-        current = data.get("current", {})
-        filter_obj(current)
+        # Process the "current" data
+        if "current" in data:
+            filter_obj(data["current"])
 
-        forecast_days = data.get("forecast", {}).get("forecastday", [])
-        for day in forecast_days:
-            filter_obj(day.get("day", {}))
-            for hour in day.get("hour", []):
-                filter_obj(hour)
+        # Process forecast data
+        if "forecast" in data and "forecastday" in data["forecast"]:
+            for day in data["forecast"]["forecastday"]:
+                if "day" in day:
+                    filter_obj(day["day"])
+                if "hour" in day and isinstance(day["hour"], list):
+                    for hour in day["hour"]:
+                        filter_obj(hour)
 
         return data
