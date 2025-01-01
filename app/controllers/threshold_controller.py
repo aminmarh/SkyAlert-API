@@ -1,11 +1,22 @@
 from flask import jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
+from marshmallow import ValidationError
+
 from app.extensions import db
+from app.helpers.generic_helper import convert_units
 from app.models.user import (
+    User,
     FavoriteCity,
     StormThreshold,
     HeatwaveThreshold,
     FloodThreshold,
+)
+from app.schemas.threshold_schema import (
+    StormSchema,
+    HeatwaveSchema,
+    FloodSchema,
+    GetThresholdSchema,
+    DeleteThresholdSchema,
 )
 
 
@@ -27,74 +38,153 @@ def create_storm_threshold():
           properties:
             favorite_city_id:
               type: integer
-              description: ID de la ville favorite.
+              description: ID of the favorite city
               example: 1
             wind_speed:
               type: float
-              description: Vitesse minimale du vent (en km/h).
+              description: Minimum wind speed
               example: 70.0
             gust_speed:
               type: float
-              description: Vitesse minimale des rafales (en km/h).
+              description: Minimum gust speed
               example: 100.0
     responses:
       201:
-        description: Seuil de tempête ajouté avec succès.
+        description: Storm threshold created successfully
         schema:
           type: object
           properties:
+            status:
+              type: string
+              example: success
+            data:
+              type: object
+              properties:
+                favorite_city_id:
+                  type: integer
+                  example: 1
+                wind_speed_metric:
+                  type: float
+                  example: 70.0
+                gust_speed_metric:
+                  type: float
+                  example: 100.0
+                wind_speed_imperial:
+                  type: float
+                  example: 43.496
+                gust_speed_imperial:
+                  type: float
+                  example: 62.1371
             message:
               type: string
-              example: "Tempête threshold created successfully"
+              example: Storm threshold created successfully
       400:
-        description: Données manquantes ou invalides.
         schema:
           type: object
           properties:
-            error:
+            status:
               type: string
-              example: "Missing required fields"
+              example: error
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: Validation failed
+            errors:
+              type: object
+              example: {"wind_speed": ["Not a valid number"]}
       404:
-        description: Ville favorite introuvable.
         schema:
           type: object
           properties:
-            error:
+            status:
               type: string
-              example: "Favorite city not found"
-      500:
-        description: Erreur serveur inattendue.
-        schema:
-          type: object
-          properties:
-            error:
+              example: error
+            data:
+              type: object
+              example: null
+            message:
               type: string
-              example: "Unexpected error: ..."
+              example: Favorite city not found
     """
+    user = User.query.get(get_jwt_identity())
+    data = request.json
+
     try:
-        data = request.json
-        favorite_city_id = data.get("favorite_city_id")
-        wind_speed = data.get("wind_speed")
-        gust_speed = data.get("gust_speed")
-
-        if not favorite_city_id or not wind_speed or not gust_speed:
-            return jsonify({"error": "Missing required fields"}), 400
-
-        favorite_city = FavoriteCity.query.get(favorite_city_id)
-        if not favorite_city:
-            return jsonify({"error": "Favorite city not found"}), 404
-
-        threshold = StormThreshold(
-            favorite_city_id=favorite_city_id,
-            wind_speed=wind_speed,
-            gust_speed=gust_speed,
+        validated_data = StormSchema().load(data)
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Validation failed",
+                    "errors": err.messages,
+                }
+            ),
+            400,
         )
-        db.session.add(threshold)
-        db.session.commit()
+    favorite_city_id = validated_data["favorite_city_id"]
+    wind_speed = validated_data["wind_speed"]
+    gust_speed = validated_data["gust_speed"]
 
-        return jsonify({"message": "Tempête threshold created successfully"}), 201
-    except Exception as e:
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+    favorite_city = FavoriteCity.query.get(favorite_city_id)
+    if not favorite_city:
+        return (
+            jsonify(
+                {"status": "error", "data": None, "message": "Favorite city not found"}
+            ),
+            404,
+        )
+
+    user_units = user.preferences
+
+    if user_units == "metric":
+        wind_speed_imperial = convert_units(
+            wind_speed, "metric", "imperial", "wind_speed"
+        )
+        gust_speed_imperial = convert_units(
+            gust_speed, "metric", "imperial", "wind_speed"
+        )
+        wind_speed_metric = wind_speed
+        gust_speed_metric = gust_speed
+    else:
+        wind_speed_metric = convert_units(
+            wind_speed, "imperial", "metric", "wind_speed"
+        )
+        gust_speed_metric = convert_units(
+            gust_speed, "imperial", "metric", "wind_speed"
+        )
+        wind_speed_imperial = wind_speed
+        gust_speed_imperial = gust_speed
+
+    threshold = StormThreshold(
+        favorite_city_id=favorite_city_id,
+        wind_speed_metric=wind_speed_metric,
+        wind_speed_imperial=wind_speed_imperial,
+        gust_speed_metric=gust_speed_metric,
+        gust_speed_imperial=gust_speed_imperial,
+    )
+    db.session.add(threshold)
+    db.session.commit()
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": {
+                    "favorite_city_id": favorite_city_id,
+                    "wind_speed_metric": wind_speed_metric,
+                    "gust_speed_metric": gust_speed_metric,
+                    "wind_speed_imperial": wind_speed_imperial,
+                    "gust_speed_imperial": gust_speed_imperial,
+                },
+                "message": "Storm threshold created successfully",
+            }
+        ),
+        201,
+    )
 
 
 @jwt_required()
@@ -111,71 +201,134 @@ def create_flood_threshold():
           in: body
           required: true
           schema:
-              type: object
-              properties:
-                  favorite_city_id:
-                      type: integer
-                      description: ID de la ville favorite.
-                      example: 1
-                  precipitation:
-                      type: float
-                      description: Précipitation minimale (en mm).
-                      example: 50.0
+            type: object
+            properties:
+              favorite_city_id:
+                type: integer
+                description: ID the favorite city
+                example: 1
+              precipitation:
+                type: float
+                description: Minimum precipitation
+                example: 50.0
     responses:
       201:
-        description: Seuil d'inondation ajouté avec succès.
         schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            data:
               type: object
               properties:
-                message:
-                  type: string
-                  example: "Inondation threshold created successfully"
+                favorite_city_id:
+                  type: integer
+                  example: 1
+                precipitation_metric:
+                  type: float
+                  example: 50.0
+                precipitation_imperial:
+                  type: float
+                  example: 1.9685
+            message:
+              type: string
+              example: Flood threshold created successfully
       400:
-        description: Données manquantes ou invalides.
         schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
               type: object
-              properties:
-                error:
-                  type: string
-                  example: "Missing required fields"
+              example: null
+            message:
+              type: string
+              example: Validation failed
+            errors:
+              type: object
+              example: {"precipitation": ["Not a valid number"]}
       404:
-        description: Ville favorite introuvable.
         schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
               type: object
-              properties:
-                error:
-                  type: string
-                  example: "Favorite city not found"
-      500:
-        description: Erreur serveur inattendue.
-        schema:
-              type: object
-              properties:
-                error:
-                  type: string
-                  example: "Unexpected error: ..."
+              example: null
+            message:
+              type: string
+              example: Favorite city not found
     """
+    user = User.query.get(get_jwt_identity())
+    data = request.json
+
     try:
-        data = request.json
-        favorite_city_id = data.get("favorite_city_id")
-        precipitation = data.get("precipitation")
-
-        if not favorite_city_id or not precipitation:
-            return jsonify({"error": "Missing required fields"}), 400
-
-        favorite_city = FavoriteCity.query.get(favorite_city_id)
-        if not favorite_city:
-            return jsonify({"error": "Favorite city not found"}), 404
-
-        threshold = FloodThreshold(
-            favorite_city_id=favorite_city_id, precipitation=precipitation
+        validated_data = FloodSchema().load(data)
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Validation failed",
+                    "errors": err.messages,
+                }
+            ),
+            400,
         )
-        db.session.add(threshold)
-        db.session.commit()
 
-        return jsonify({"message": "Inondation threshold created successfully"}), 201
-    except Exception as e:
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+    favorite_city_id = validated_data["favorite_city_id"]
+    precipitation = validated_data["precipitation"]
+
+    favorite_city = FavoriteCity.query.get(favorite_city_id)
+    if not favorite_city:
+        return (
+            jsonify(
+                {"status": "error", "data": None, "message": "Favorite city not found"}
+            ),
+            404,
+        )
+
+    user_units = user.preferences
+
+    if user_units == "metric":
+        precipitation_imperial = convert_units(
+            precipitation, "metric", "imperial", "precipitation"
+        )
+        precipitation_metric = precipitation
+    else:
+        precipitation_metric = convert_units(
+            precipitation, "imperial", "metric", "precipitation"
+        )
+        precipitation_imperial = precipitation
+
+    threshold = FloodThreshold(
+        favorite_city_id=favorite_city_id,
+        precipitation_metric=precipitation_metric,
+        precipitation_imperial=precipitation_imperial,
+    )
+    db.session.add(threshold)
+    db.session.commit()
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": {
+                    "favorite_city_id": favorite_city_id,
+                    "precipitation_metric": precipitation_metric,
+                    "precipitation_imperial": precipitation_imperial,
+                },
+                "message": "Flood threshold created successfully",
+            }
+        ),
+        201,
+    )
 
 
 @jwt_required()
@@ -192,78 +345,144 @@ def create_heatwave_threshold():
           in: body
           required: true
           schema:
-              type: object
-              properties:
+            type: object
+            properties:
               favorite_city_id:
-                  type: integer
-                  description: ID de la ville favorite.
-                  example: 1
+                type: integer
+                description: ID the favorite city
+                example: 1
               temperature:
-                  type: float
-                  description: Température minimale (en °C).
-                  example: 40.0
+                type: float
+                description: Minimum temperature
+                example: 40.0
               humidity:
-                  type: float
-                  description: Humidité minimale (en %).
-                  example: 80.0
+                type: float
+                description: Minimum humidity
+                example: 80.0
     responses:
       201:
-        description: Seuil de canicule ajouté avec succès.
         schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            data:
               type: object
               properties:
-                message:
-                  type: string
-                  example: "Canicule threshold created successfully"
+                favorite_city_id:
+                  type: integer
+                  example: 1
+                temperature_metric:
+                  type: float
+                  example: 35.0
+                temperature_imperial:
+                  type: float
+                  example: 95.0
+                humidity:
+                  type: float
+                  example: 80.0
+            message:
+              type: string
+              example: HeatWave threshold created successfully
       400:
-        description: Données manquantes ou invalides.
         schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
               type: object
-              properties:
-                error:
-                  type: string
-                  example: "Missing required fields"
+              example: null
+            message:
+              type: string
+              example: Validation failed
+            errors:
+              type: object
+              example: {"temperature": ["Not a valid number"]}
       404:
-        description: Ville favorite introuvable.
         schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
               type: object
-              properties:
-                error:
-                  type: string
-                  example: "Favorite city not found"
-      500:
-        description: Erreur serveur inattendue.
-        schema:
-              type: object
-              properties:
-                error:
-                  type: string
-                  example: "Unexpected error: ..."
+              example: null
+            message:
+              type: string
+              example: Favorite city not found
     """
+    user = User.query.get(get_jwt_identity())
+    data = request.json
+
     try:
-        data = request.json
-        favorite_city_id = data.get("favorite_city_id")
-        temperature = data.get("temperature")
-        humidity = data.get("humidity")
-
-        if not favorite_city_id or not temperature or not humidity:
-            return jsonify({"error": "Missing required fields"}), 400
-
-        favorite_city = FavoriteCity.query.get(favorite_city_id)
-        if not favorite_city:
-            return jsonify({"error": "Favorite city not found"}), 404
-
-        threshold = HeatwaveThreshold(
-            favorite_city_id=favorite_city_id,
-            temperature=temperature,
-            humidity=humidity,
+        validated_data = HeatwaveSchema().load(data)
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Validation failed",
+                    "errors": err.messages,
+                }
+            ),
+            400,
         )
-        db.session.add(threshold)
-        db.session.commit()
 
-        return jsonify({"message": "Canicule threshold created successfully"}), 201
-    except Exception as e:
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+    favorite_city_id = validated_data["favorite_city_id"]
+    temperature = validated_data["temperature"]
+    humidity = validated_data["humidity"]
+
+    favorite_city = FavoriteCity.query.get(favorite_city_id)
+    if not favorite_city:
+        return (
+            jsonify(
+                {"status": "error", "data": None, "message": "Favorite city not found"}
+            ),
+            404,
+        )
+
+    user_units = user.preferences
+
+    if user_units == "metric":
+        temperature_imperial = convert_units(
+            temperature, "metric", "imperial", "temperature"
+        )
+        temperature_metric = temperature
+    else:
+        temperature_metric = convert_units(
+            temperature, "imperial", "metric", "temperature"
+        )
+        temperature_imperial = temperature
+
+    threshold = HeatwaveThreshold(
+        favorite_city_id=favorite_city_id,
+        temperature_metric=temperature_metric,
+        temperature_imperial=temperature_imperial,
+        humidity=humidity,
+    )
+    db.session.add(threshold)
+    db.session.commit()
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": {
+                    "favorite_city_id": favorite_city_id,
+                    "temperature_metric": temperature_metric,
+                    "temperature_imperial": temperature_imperial,
+                    "humidity": humidity,
+                },
+                "message": "HeatWave threshold created successfully",
+            }
+        ),
+        201,
+    )
 
 
 @jwt_required()
@@ -282,73 +501,157 @@ def delete_threshold():
         schema:
           type: object
           properties:
+            favorite_city_id:
+              type: integer
+              description: ID the favorite city
+              example: 1
             threshold_id:
               type: integer
-              description: ID du seuil.
+              description: ID the threshold
               example: 1
             threshold_type:
               type: string
-              description: Type de seuil ("storm", "heatwave", "flood").
+              description: Type of the threshold
               example: "storm"
     responses:
       200:
-        description: Seuil supprimé avec succès.
         schema:
           type: object
           properties:
+            status:
+              type: string
+              example: success
+            data:
+              type: object
+              properties:
+                favorite_city_id:
+                  type: integer
+                  example: 1
+                threshold_id:
+                  type: integer
+                  example: 2
+                threshold_type:
+                  type: srting
+                  example: "storm"
             message:
               type: string
-              example: "Threshold deleted successfully"
+              example: Threshold deleted successfully
       400:
-        description: Données manquantes ou invalides.
         schema:
           type: object
           properties:
+            status:
+              type: string
+              example: error
+            data:
+              type: object
+              example: null
             message:
               type: string
-              example: "Missing required fields"
+              example: "Validation failed"
+            errors:
+              type: object
+              example: {"threshold_type": ["Invalid Threshold Type"]}
       404:
-        description: Seuil introuvable.
         schema:
           type: object
           properties:
+            status:
+              type: string
+              example: error
+            data:
+              type: object
+              example: null
             message:
               type: string
               example: "Threshold not found"
-      500:
-        description: Erreur serveur inattendue.
-        schema:
-          type: object
-          properties:
-            message:
-              type: string
-              example: "Unexpected error: ..."
     """
+    data = request.json
     try:
-        data = request.json
-        threshold_id = data.get("threshold_id")
-        threshold_type = data.get("threshold_type")
+        validated_data = DeleteThresholdSchema().load(data)
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Validation failed",
+                    "errors": err.messages,
+                }
+            ),
+            400,
+        )
 
-        if not threshold_id or not threshold_type:
-            return jsonify({"error": "Missing required fields"}), 400
+    favorite_city_id = validated_data["favorite_city_id"]
+    threshold_id = validated_data["threshold_id"]
+    threshold_type = validated_data["threshold_type"]
 
-        if threshold_type == "storm":
-            threshold = StormThreshold.query.get(threshold_id)
-        elif threshold_type == "heatwave":
-            threshold = HeatwaveThreshold.query.get(threshold_id)
-        elif threshold_type == "flood":
-            threshold = FloodThreshold.query.get(threshold_id)
-        else:
-            return jsonify({"error": "Invalid threshold type"}), 400
+    favorite_city = FavoriteCity.query.get(favorite_city_id)
+    if not favorite_city:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Favorite city not found",
+                }
+            ),
+            404,
+        )
 
-        if not threshold:
-            return jsonify({"error": "Threshold not found"}), 404
+    if threshold_type == "storm":
+        threshold = StormThreshold.query.filter_by(
+            id=threshold_id, favorite_city_id=favorite_city_id
+        ).first()
+    elif threshold_type == "heatwave":
+        threshold = HeatwaveThreshold.query.filter_by(
+            id=threshold_id, favorite_city_id=favorite_city_id
+        ).first()
+    elif threshold_type == "flood":
+        threshold = FloodThreshold.query.filter_by(
+            id=threshold_id, favorite_city_id=favorite_city_id
+        ).first()
+    else:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Invalid threshold type",
+                }
+            ),
+            400,
+        )
 
-        db.session.delete(threshold)
-        db.session.commit()
-        return jsonify({"message": "Threshold deleted successfully"}), 200
-    except Exception as e:
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+    if not threshold:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Threshold not found",
+                }
+            ),
+            404,
+        )
+
+    db.session.delete(threshold)
+    db.session.commit()
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": {
+                    "favorite_city_id": favorite_city_id,
+                    "threshold_id": threshold_id,
+                    "threshold_type": threshold_type,
+                },
+                "message": "Threshold deleted successfully",
+            }
+        ),
+        200,
+    )
 
 
 @jwt_required()
@@ -361,16 +664,25 @@ def get_thresholds():
     security:
       - Bearer: []
     parameters:
-      - name: favorite_city_id
-        in: query
+      - name: body
+        in: body
         required: true
-        description: ID de la ville favorite.
         schema:
-          type: integer
+          type: object
+          properties:
+            favorite_city_id:
+              type: integer
+              description: ID the favorite city
+              example: 1
     responses:
       200:
-        description: Liste des seuils récupérée avec succès.
         schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            data:
               type: object
               properties:
                 storm:
@@ -413,60 +725,125 @@ def get_thresholds():
                       created_at:
                         type: string
                         format: date-time
+            message:
+              type: string
+              example: Thresholds retrieved successfully
+      400:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Validation failed"
+            errors:
+              type: object
+              example: {"favorite_city_id": ["Not a valid number"]}
       404:
-        description: Ville favorite introuvable.
         schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
               type: object
-              properties:
-                error:
-                  type: string
-                  example: "Favorite city not found"
-      500:
-        description: Erreur serveur inattendue.
-        schema:
-              type: object
-              properties:
-                error:
-                  type: string
-                  example: "Unexpected error: ..."
+              example: null
+            message:
+              type: string
+              example: "Favorite city not found"
     """
+    user = User.query.get(get_jwt_identity())
+    data = request.json
+
     try:
-        favorite_city_id = request.args.get("favorite_city_id", type=int)
-        if not favorite_city_id:
-            return jsonify({"error": "favorite_city_id is required"}), 400
+        validated_data = GetThresholdSchema().load(data)
+    except ValidationError as err:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Validation failed",
+                    "errors": err.messages,
+                }
+            ),
+            400,
+        )
 
-        favorite_city = FavoriteCity.query.get(favorite_city_id)
-        if not favorite_city:
-            return jsonify({"error": "Favorite city not found"}), 404
+    favorite_city_id = validated_data["favorite_city_id"]
 
-        thresholds = {
-            "storm": [
+    favorite_city = FavoriteCity.query.get(favorite_city_id)
+    if not favorite_city:
+        return (
+            jsonify(
                 {
-                    "id": t.id,
-                    "wind_speed": t.wind_speed,
-                    "gust_speed": t.gust_speed,
-                    "created_at": t.created_at.isoformat(),
+                    "status": "error",
+                    "data": None,
+                    "message": "Favorite city not found",
                 }
-                for t in favorite_city.storm_thresholds
-            ],
-            "heatwave": [
-                {
-                    "id": t.id,
-                    "temperature": t.temperature,
-                    "humidity": t.humidity,
-                    "created_at": t.created_at.isoformat(),
-                }
-                for t in favorite_city.heatwave_thresholds
-            ],
-            "flood": [
-                {
-                    "id": t.id,
-                    "precipitation": t.precipitation,
-                    "created_at": t.created_at.isoformat(),
-                }
-                for t in favorite_city.flood_thresholds
-            ],
-        }
-        return jsonify(thresholds), 200
-    except Exception as e:
-        return jsonify({"error": f"Unexpected error: {str(e)}"}), 500
+            ),
+            404,
+        )
+
+    user_units = user.preferences
+
+    thresholds = {
+        "storm": [
+            {
+                "id": t.id,
+                "wind_speed": (
+                    t.wind_speed_imperial
+                    if user_units == "imperial"
+                    else t.wind_speed_metric
+                ),
+                "gust_speed": (
+                    t.gust_speed_imperial
+                    if user_units == "imperial"
+                    else t.gust_speed_metric
+                ),
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in favorite_city.storm_thresholds
+        ],
+        "heatwave": [
+            {
+                "id": t.id,
+                "temperature": (
+                    t.temperature_imperial
+                    if user_units == "imperial"
+                    else t.temperature_metric
+                ),
+                "humidity": t.humidity,
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in favorite_city.heatwave_thresholds
+        ],
+        "flood": [
+            {
+                "id": t.id,
+                "precipitation": (
+                    t.precipitation_imperial
+                    if user_units == "imperial"
+                    else t.precipitation_metric
+                ),
+                "created_at": t.created_at.isoformat(),
+            }
+            for t in favorite_city.flood_thresholds
+        ],
+    }
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": thresholds,
+                "message": "Thresholds retrieved successfully",
+            }
+        ),
+        200,
+    )

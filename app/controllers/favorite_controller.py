@@ -1,8 +1,10 @@
 from flask import jsonify, request
-
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from app.models.user import FavoriteCity
+from marshmallow import ValidationError
+
 from app.extensions import db
+from app.models.user import FavoriteCity
+from app.schemas.favorite_schema import AddFavoriteCitySchema, DeleteFavoriteCitySchema
 
 
 @jwt_required()
@@ -27,28 +29,92 @@ def add_favorite_city():
               example: Paris
     responses:
       201:
-        description: City added to favorites
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            data:
+              type: object
+              properties:
+                city:
+                  type: string
+                  example: Paris
+            message:
+              type: string
+              example: City 'Paris' added to favorites
       400:
-        description: Missing parameter
-      401:
-        description: Unauthorized user
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Validation failed"
+            errors:
+              type: object
+              example: {"city": ["City name must be a string containing only letters and spaces"]}
+      409:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: City already in favorites
     """
     user_id = get_jwt_identity()
     data = request.json
 
-    city = data.get("city")
+    try:
+        validated_data = AddFavoriteCitySchema().load(data)
+    except ValidationError as err:
+        return {
+            "status": "error",
+            "data": None,
+            "message": "Validation failed",
+            "errors": err.messages,
+        }, 400
 
-    if not city or not isinstance(city, str):
-        return jsonify({"error": "City is required"}), 400
+    city = validated_data["city"]
 
     if FavoriteCity.query.filter_by(user_id=user_id, city=city).first():
-        return jsonify({"error": "City already in favorites"}), 400
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "City already in favorites",
+                }
+            ),
+            409,
+        )
 
     favorite = FavoriteCity(user_id=user_id, city=city)
     db.session.add(favorite)
     db.session.commit()
 
-    return jsonify({"message": f"City '{city}' added to favorites"}), 201
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": {"city": city},
+                "message": f"City '{city}' added to favorites",
+            }
+        ),
+        201,
+    )
 
 
 @jwt_required()
@@ -73,28 +139,88 @@ def remove_favorite_city():
               example: Paris
     responses:
       200:
-        description: City removed from favorites
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            data:
+              type: object
+              properties:
+                city:
+                  type: string
+                  example: Paris
+            message:
+              type: string
+              example: City removed from favorites
       400:
-        description: Missing parameter
-      401:
-        description: Unauthorized user
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Validation failed"
+            errors:
+              type: object
+              example: {"city": ["City name must be a string containing only letters and spaces"]}
+      404:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: Favorite city not found
     """
     user_id = get_jwt_identity()
     data = request.json
-    city = data.get("city")
 
-    if not city:
-        return jsonify({"error": "City is required"}), 400
+    try:
+        validated_data = DeleteFavoriteCitySchema().load(data)
+    except ValidationError as err:
+        return {
+            "status": "error",
+            "data": None,
+            "message": "Validation failed",
+            "errors": err.messages,
+        }, 400
+
+    city = validated_data["city"]
 
     favorite = FavoriteCity.query.filter_by(user_id=user_id, city=city).first()
-
     if not favorite:
-        return jsonify({"error": "Favorite city not found"}), 404
+        return (
+            jsonify(
+                {"status": "error", "data": None, "message": "Favorite city not found"}
+            ),
+            404,
+        )
 
     db.session.delete(favorite)
     db.session.commit()
 
-    return jsonify({"message": "City removed from favorites", "city": city}), 200
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": {"city": city},
+                "message": "City removed from favorites",
+            }
+        ),
+        200,
+    )
 
 
 @jwt_required()
@@ -108,24 +234,53 @@ def get_favorite_cities():
       - Bearer: []
     responses:
       200:
-        description: List of favorite cities
         schema:
-          type: array
-          items:
-            type: object
-            properties:
-              id:
-                type: integer
-                description: Favorite city ID
-                example: 1
-              city:
-                type: string
-                description: City name
-                example: Paris
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                    example: 1
+                  city:
+                    type: string
+                    example: Paris
+            message:
+              type: string
+              example: List of favorite cities retrieved successfully
       401:
-        description: Missing or invalid authorization token
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: error
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Unauthorized"
     """
     user_id = get_jwt_identity()
+
     favorites = FavoriteCity.query.filter_by(user_id=user_id).all()
 
-    return jsonify([{"id": f.id, "city": f.city} for f in favorites])
+    favorite_cities = [{"id": f.id, "city": f.city} for f in favorites]
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": favorite_cities,
+                "message": "List of favorite cities retrieved successfully",
+            }
+        ),
+        200,
+    )

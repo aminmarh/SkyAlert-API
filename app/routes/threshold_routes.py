@@ -15,4 +15,4 @@ threshold_bp.add_url_rule(
     "/heatwave", view_func=create_heatwave_threshold, methods=["POST"]
 )
 threshold_bp.add_url_rule("/delete", view_func=delete_threshold, methods=["DELETE"])
-threshold_bp.add_url_rule("", view_func=get_thresholds, methods=["GET"])
+threshold_bp.add_url_rule("", view_func=get_thresholds, methods=["POST"])

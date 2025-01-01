@@ -1,7 +1,8 @@
 from flask import jsonify, request
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 from app.helpers.weather import WeatherAPI
+from app.models.user import User
 
 
 @jwt_required()
@@ -48,6 +49,10 @@ def get_forecast():
       400:
         description: Missing city parameter
     """
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    preferences = user.preferences if user else "metric"
+
     city = request.args.get("city")
     days = request.args.get("days", 3)
     aqi = request.args.get("aqi", "no")
@@ -56,7 +61,8 @@ def get_forecast():
     if not city:
         return jsonify({"error": "City parameter is required"}), 400
 
-    forecast_data = WeatherAPI.get_forecast(city, days, aqi, alerts)
+    forecast_data = WeatherAPI.get_forecast(city, days, aqi, alerts, preferences)
+
     if "error" in forecast_data:
         return jsonify({"error": forecast_data["error"]}), 400
 
