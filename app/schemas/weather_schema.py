@@ -5,11 +5,17 @@ class CityNameType(fields.Str):
     def __init__(self, *args, **kwargs):
         kwargs["validate"] = [
             validate.Regexp(
-                r"^[a-zA-Z\s]+$",
-                error="City name must be a string containing only letters and spaces",
+                r"^[a-zA-Z0-9\s\.\-\+]+$",
+                error=(
+                    "City must contain only letters, numbers, spaces, or valid geographical symbols (-, +, .). "
+                    "Special characters are not allowed."
+                ),
             )
         ]
-        kwargs["description"] = "Name of the city"
+        kwargs["description"] = (
+            "Name of the city (letters, numbers, and spaces only) or geographical coordinates "
+            "in the format 'latitude longitude' (e.g., '48.8566 2.3522'). Special characters are not allowed."
+        )
         super().__init__(*args, **kwargs)
 
 
