@@ -1065,6 +1065,7 @@ def get_user_info():
                     "id": user.id,
                     "username": user.username,
                     "email": user.email,
+                    "preferences": user.preferences,
                 },
                 "message": "User information retrieved successfully",
             }
