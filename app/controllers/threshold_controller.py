@@ -138,6 +138,24 @@ def create_storm_threshold():
             404,
         )
 
+    existing_threshold = StormThreshold.query.filter_by(
+        favorite_city_id=favorite_city_id,
+        wind_speed_metric=wind_speed,
+        gust_speed_metric=gust_speed,
+    ).first()
+
+    if existing_threshold:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "A storm threshold with the same values already exists for this city",
+                }
+            ),
+            400,
+        )
+
     user_units = user.preferences
 
     if user_units == "metric":
@@ -843,6 +861,66 @@ def get_thresholds():
                 "status": "success",
                 "data": thresholds,
                 "message": "Thresholds retrieved successfully",
+            }
+        ),
+        200,
+    )
+
+
+@jwt_required()
+def get_cities_with_thresholds():
+    """
+    Récupérer les villes ayant au moins un seuil.
+    ---
+    tags:
+      - Thresholds
+    security:
+      - Bearer: []
+    responses:
+      200:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: success
+            data:
+              type: array
+              items:
+                type: object
+                properties:
+                  city_id:
+                    type: integer
+                    example: 1
+                  city_name:
+                    type: string
+                    example: "Paris"
+            message:
+              type: string
+              example: "Cities with thresholds retrieved successfully"
+    """
+    cities_with_thresholds = (
+        db.session.query(FavoriteCity)
+        .filter(
+            db.or_(
+                FavoriteCity.storm_thresholds.any(),
+                FavoriteCity.heatwave_thresholds.any(),
+                FavoriteCity.flood_thresholds.any(),
+            )
+        )
+        .all()
+    )
+
+    result = [
+        {"city_id": city.id, "city_name": city.city} for city in cities_with_thresholds
+    ]
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": result,
+                "message": "Cities with thresholds retrieved successfully",
             }
         ),
         200,
