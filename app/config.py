@@ -1,6 +1,7 @@
 import os
 
 from dotenv import load_dotenv
+from datetime import timedelta
 
 load_dotenv()
 
@@ -13,4 +14,4 @@ class Config:
     WEATHER_API_KEY = os.getenv("WEATHER_API_KEY", "your_weather_api_key")
     JWT_BLACKLIST_ENABLED = True
     JWT_BLACKLIST_TOKEN_CHECKS = ["access"]
-    JWT_ACCESS_TOKEN_EXPIRES = False
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=1)
