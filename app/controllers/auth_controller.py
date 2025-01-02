@@ -22,6 +22,7 @@ from app.schemas.auth_schema import (
     RequestPasswordResetSchema,
     VerifyResetCodeSchema,
     PasswordForgotSchema,
+    VerifyEmailCodeSchema,
 )
 
 
@@ -57,16 +58,10 @@ def register():
               example: "success"
             data:
               type: object
-              properties:
-                username:
-                  type: string
-                  example: "testuser"
-                email:
-                  type: string
-                  example: "testuser@example.com"
+              example: null
             message:
               type: string
-              example: "User registered successfully"
+              example: "Verification email sent successfully"
       400:
         schema:
           type: object
@@ -96,6 +91,19 @@ def register():
             message:
               type: string
               example: "Email already registered"
+      500:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Failed to send email: Error details here"
     """
     data = request.json
 
@@ -116,7 +124,6 @@ def register():
 
     username = validated_data["username"]
     email = validated_data["email"]
-    password = validated_data["password"]
 
     if User.query.filter_by(email=email).first():
         return (
@@ -126,9 +133,186 @@ def register():
             409,
         )
 
+    code = f"{random.randint(100000, 999999)}"
+
+    reset_code = PasswordResetCode(email=email, code=code, is_used=False)
+    db.session.add(reset_code)
+    db.session.commit()
+
+    email_body = (
+        f"Bonjour {username},\n\n"
+        "Merci de vous être inscrit sur SkyAlert !\n"
+        "Veuillez utiliser le code ci-dessous pour vérifier votre adresse email et compléter votre inscription :\n"
+        f"{code}\n"
+        "Si vous n’avez pas demandé cette inscription, veuillez ignorer cet email.\n"
+        "Pour votre sécurité, ce code expirera dans 15 minutes.\n\n"
+        "Ceci est un e-mail automatique, veuillez ne pas y répondre.\n\n"
+        "Cordialement,\n"
+        "L'équipe SkyAlert"
+    )
+
+    try:
+        Email.send_email(
+            to=email,
+            subject="SkyAlert - Code de vérification de votre email",
+            body=email_body,
+        )
+    except Exception as e:
+        db.session.delete(reset_code)
+        db.session.commit()
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": f"Failed to send email: {str(e)}",
+                }
+            ),
+            500,
+        )
+
+    return (
+        jsonify(
+            {
+                "status": "success",
+                "data": None,
+                "message": "Verification email sent successfully",
+            }
+        ),
+        201,
+    )
+
+
+def verif_mail():
+    """
+    Vérifier un code de validation d'email.
+    ---
+    tags:
+      - Authentification
+    parameters:
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            username:
+              type: string
+              example: testuser
+            email:
+              type: string
+              example: testuser@example.com
+            password:
+              type: string
+              example: password123
+            code:
+              type: string
+              description: The 6-digit reset code
+              example: "123456"
+    responses:
+      200:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "success"
+            data:
+              properties:
+                username:
+                  type: string
+                  example: "testuser"
+                email:
+                  type: string
+                  example: "testuser@example.com"
+            message:
+              type: string
+              example: "User registered successfully"
+      400:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Validation failed"
+            errors:
+              type: object
+              example: {"email": ["Not a valid email address"],
+                "code": ["Length must be between 6 and 6."]}
+      401:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Invalid or expired code"
+      410:
+        schema:
+          type: object
+          properties:
+            status:
+              type: string
+              example: "error"
+            data:
+              type: object
+              example: null
+            message:
+              type: string
+              example: "Code expired"
+    """
+    data = request.json
+
+    try:
+        validated_data = VerifyEmailCodeSchema().load(data)
+    except ValidationError as err:
+        return {
+            "status": "error",
+            "data": None,
+            "message": "Validation failed",
+            "errors": err.messages,
+        }, 400
+
+    username = validated_data["username"]
+    email = validated_data["email"]
+    password = validated_data["password"]
+    code = validated_data["code"]
+
+    reset_code = PasswordResetCode.query.filter_by(
+        email=email, code=code, is_used=False
+    ).first()
+    if not reset_code:
+        return (
+            jsonify(
+                {"status": "error", "data": None, "message": "Invalid or expired code"}
+            ),
+            401,
+        )
+
+    time_elapsed = datetime.datetime.utcnow() - reset_code.created_at
+    if time_elapsed.total_seconds() > 900:
+        return (
+            jsonify({"status": "error", "data": None, "message": "Code expired"}),
+            410,
+        )
+
     user = User(username=username, email=email)
     user.set_password(password)
     db.session.add(user)
+    db.session.commit()
+
+    reset_code.is_used = True
     db.session.commit()
 
     return (
@@ -139,7 +323,7 @@ def register():
                 "message": "User registered successfully",
             }
         ),
-        201,
+        200,
     )
 
 
@@ -742,6 +926,8 @@ def request_password_reset():
             body=email_body,
         )
     except Exception as e:
+        db.session.delete(reset_code)
+        db.session.commit()
         return (
             jsonify(
                 {
