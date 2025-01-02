@@ -7,7 +7,7 @@ class CityNameType(fields.Str):
     def __init__(self, *args, **kwargs):
         kwargs["validate"] = [
             validate.Regexp(
-                r"^[a-zA-Z\s]+$",
+                r"^[a-zA-ZÀ-ÖØ-öø-ÿĀ-žÆŒæœ\s-]+$",
                 error="City name must be a string containing only letters and spaces",
             )
         ]
