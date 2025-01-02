@@ -94,7 +94,7 @@ class RequestPasswordResetSchema(Schema):
     email = EmailType(required=True)
 
 
-class VerifyResetCodeSchema(Schema):
+class VerifyPasswordResetCodeSchema(Schema):
     email = EmailType(required=True)
     code = CodeType(required=True)
 

@@ -13,14 +13,14 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db, add_token_to_blacklist
 from app.helpers.email import Email
-from app.models.user import User, PasswordResetCode
+from app.models.user import User, ResetCode
 from app.schemas.auth_schema import (
     RegisterSchema,
     LoginSchema,
     UserUpdateSchema,
     PasswordUpdateSchema,
     RequestPasswordResetSchema,
-    VerifyResetCodeSchema,
+    VerifyPasswordResetCodeSchema,
     PasswordForgotSchema,
     VerifyEmailCodeSchema,
 )
@@ -135,7 +135,7 @@ def register():
 
     code = f"{random.randint(100000, 999999)}"
 
-    reset_code = PasswordResetCode(email=email, code=code, is_used=False)
+    reset_code = ResetCode(email=email, code=code, is_used=False)
     db.session.add(reset_code)
     db.session.commit()
 
@@ -289,7 +289,7 @@ def verif_mail():
     password = validated_data["password"]
     code = validated_data["code"]
 
-    reset_code = PasswordResetCode.query.filter_by(
+    reset_code = ResetCode.query.filter_by(
         email=email, code=code, is_used=False
     ).first()
     if not reset_code:
@@ -902,7 +902,7 @@ def request_password_reset():
 
     code = f"{random.randint(100000, 999999)}"
 
-    reset_code = PasswordResetCode(email=email, code=code)
+    reset_code = ResetCode(email=email, code=code)
     db.session.add(reset_code)
     db.session.commit()
 
@@ -1028,7 +1028,7 @@ def verify_reset_code():
     data = request.json
 
     try:
-        validated_data = VerifyResetCodeSchema().load(data)
+        validated_data = VerifyPasswordResetCodeSchema().load(data)
     except ValidationError as err:
         return {
             "status": "error",
@@ -1040,7 +1040,7 @@ def verify_reset_code():
     code = validated_data["code"]
     email = validated_data["email"]
 
-    reset_code = PasswordResetCode.query.filter_by(
+    reset_code = ResetCode.query.filter_by(
         email=email, code=code, is_used=False
     ).first()
 
@@ -1167,7 +1167,7 @@ def reset_password():
     email = validated_data["email"]
     new_password = validated_data["new_password"]
 
-    reset_code = PasswordResetCode.query.filter_by(
+    reset_code = ResetCode.query.filter_by(
         email=email, code=code, is_used=False
     ).first()
     if not reset_code:
