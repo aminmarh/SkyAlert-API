@@ -11,6 +11,7 @@ from app.controllers.auth_controller import (
     reset_password,
     get_user_info,
     delete_account,
+    verif_mail,
 )
 
 auth_bp = Blueprint("auth", __name__)
@@ -31,3 +32,4 @@ auth_bp.add_url_rule(
 auth_bp.add_url_rule("/logout", view_func=logout, methods=["POST"])
 auth_bp.add_url_rule("/user", view_func=get_user_info, methods=["GET"])
 auth_bp.add_url_rule("/delete", view_func=delete_account, methods=["DELETE"])
+auth_bp.add_url_rule("/verify-email", view_func=verif_mail, methods=["POST"])

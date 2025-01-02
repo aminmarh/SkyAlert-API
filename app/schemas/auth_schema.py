@@ -72,6 +72,13 @@ class LoginSchema(Schema):
     password = PasswordType(required=True)
 
 
+class VerifyEmailCodeSchema(Schema):
+    username = UsernameType(required=True)
+    email = EmailType(required=True)
+    password = PasswordType(required=True)
+    code = CodeType(required=True)
+
+
 class UserUpdateSchema(Schema):
     username = UsernameType(required=False)
     email = EmailType(required=False)
@@ -87,7 +94,7 @@ class RequestPasswordResetSchema(Schema):
     email = EmailType(required=True)
 
 
-class VerifyResetCodeSchema(Schema):
+class VerifyPasswordResetCodeSchema(Schema):
     email = EmailType(required=True)
     code = CodeType(required=True)
 
