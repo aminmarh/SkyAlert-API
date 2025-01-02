@@ -142,17 +142,8 @@ def create_storm_threshold():
 
     existing_threshold = StormThreshold.query.filter(
         StormThreshold.favorite_city_id == favorite_city_id,
-        (
-            (
-                StormThreshold.wind_speed_metric == wind_speed
-                and StormThreshold.gust_speed_metric == gust_speed
-            )
-            if user_units == "metric"
-            else (
-                StormThreshold.wind_speed_imperial == wind_speed
-                and StormThreshold.gust_speed_imperial == gust_speed
-            )
-        ),
+        StormThreshold.wind_speed_metric == wind_speed,
+        StormThreshold.gust_speed_metric == gust_speed,
     ).first()
 
     if existing_threshold:
@@ -498,17 +489,8 @@ def create_heatwave_threshold():
 
     existing_threshold = HeatwaveThreshold.query.filter(
         HeatwaveThreshold.favorite_city_id == favorite_city_id,
-        (
-            (
-                HeatwaveThreshold.temperature_metric == temperature
-                and HeatwaveThreshold.humidity == humidity
-            )
-            if user_units == "metric"
-            else (
-                HeatwaveThreshold.temperature_imperial == temperature
-                and HeatwaveThreshold.humidity == humidity
-            )
-        ),
+        HeatwaveThreshold.temperature_metric == temperature,
+        HeatwaveThreshold.humidity == humidity,
     ).first()
 
     if existing_threshold:
