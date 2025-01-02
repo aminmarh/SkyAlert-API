@@ -938,14 +938,30 @@ def get_cities_with_thresholds():
               type: string
               example: "Cities with thresholds retrieved successfully"
     """
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+
+    if not user:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "User not found",
+                }
+            ),
+            404,
+        )
+
     cities_with_thresholds = (
         db.session.query(FavoriteCity)
         .filter(
+            FavoriteCity.user_id == user_id,
             db.or_(
                 FavoriteCity.storm_thresholds.any(),
                 FavoriteCity.heatwave_thresholds.any(),
                 FavoriteCity.flood_thresholds.any(),
-            )
+            ),
         )
         .all()
     )
