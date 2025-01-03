@@ -980,3 +980,111 @@ def get_cities_with_thresholds():
         ),
         200,
     )
+
+
+def get_cities_with_thresholds_and_thresholds_raw(user_id):
+    """
+    Récupérer les villes avec leurs seuils associés pour un utilisateur spécifique.
+    """
+    user = User.query.get(user_id)
+    if not user:
+        raise ValueError("User not found")
+
+    preferences = user.preferences.lower()
+    is_metric = preferences == "metric"
+
+    cities_with_thresholds = (
+        db.session.query(FavoriteCity)
+        .filter(
+            db.or_(
+                FavoriteCity.storm_thresholds.any(),
+                FavoriteCity.heatwave_thresholds.any(),
+                FavoriteCity.flood_thresholds.any(),
+            )
+        )
+        .all()
+    )
+
+    result = []
+    for city in cities_with_thresholds:
+        thresholds = []
+
+        for threshold in city.storm_thresholds:
+            thresholds.append(
+                {
+                    "type": "storm",
+                    "details": {
+                        "wind_speed": (
+                            threshold.wind_speed_metric
+                            if is_metric
+                            else threshold.wind_speed_imperial
+                        ),
+                        "gust_speed": (
+                            threshold.gust_speed_metric
+                            if is_metric
+                            else threshold.gust_speed_imperial
+                        ),
+                    },
+                }
+            )
+
+        for threshold in city.heatwave_thresholds:
+            thresholds.append(
+                {
+                    "type": "heatwave",
+                    "details": {
+                        "temperature": (
+                            threshold.temperature_metric
+                            if is_metric
+                            else threshold.temperature_imperial
+                        ),
+                        "humidity": threshold.humidity,
+                    },
+                }
+            )
+
+        for threshold in city.flood_thresholds:
+            thresholds.append(
+                {
+                    "type": "flood",
+                    "details": {
+                        "precipitation": (
+                            threshold.precipitation_metric
+                            if is_metric
+                            else threshold.precipitation_imperial
+                        ),
+                    },
+                }
+            )
+
+        result.append(
+            {
+                "city_id": city.id,
+                "city_name": city.city,
+                "thresholds": thresholds,
+            }
+        )
+
+    return result
+
+
+@jwt_required()
+def get_cities_with_thresholds_and_thresholds():
+    """
+    Récupérer les villes avec leurs seuils associés.
+    """
+    user_id = get_jwt_identity()
+    try:
+        data = get_cities_with_thresholds_and_thresholds_raw(user_id)
+        return (
+            jsonify(
+                {
+                    "status": "success",
+                    "data": data,
+                    "message": "Cities with thresholds and their data retrieved successfully",
+                }
+            ),
+            200,
+        )
+    except ValueError as e:
+        return jsonify({"status": "error", "message": str(e)}), 404
