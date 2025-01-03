@@ -234,7 +234,6 @@ def compare_weather_and_thresholds(app):
                     continue
 
                 weather_data = fetch_weather_data(city_name, is_metric)
-                app.logger.info(f"Weather data for city {city_name}: {weather_data}")
 
                 if "error" in weather_data:
                     app.logger.error(
