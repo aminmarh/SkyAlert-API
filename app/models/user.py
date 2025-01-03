@@ -87,10 +87,10 @@ class StormThreshold(db.Model):
     favorite_city_id = db.Column(
         db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
     )
-    wind_speed_metric = db.Column(db.Float, nullable=False)
-    wind_speed_imperial = db.Column(db.Float, nullable=False)
-    gust_speed_metric = db.Column(db.Float, nullable=False)
-    gust_speed_imperial = db.Column(db.Float, nullable=False)
+    wind_speed_metric = db.Column(db.Integer, nullable=False)
+    wind_speed_imperial = db.Column(db.Integer, nullable=False)
+    gust_speed_metric = db.Column(db.Integer, nullable=False)
+    gust_speed_imperial = db.Column(db.Integer, nullable=False)
     threshold_reached = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
@@ -102,9 +102,9 @@ class HeatwaveThreshold(db.Model):
     favorite_city_id = db.Column(
         db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
     )
-    temperature_metric = db.Column(db.Float, nullable=False)
-    temperature_imperial = db.Column(db.Float, nullable=False)
-    humidity = db.Column(db.Float, nullable=False)
+    temperature_metric = db.Column(db.Integer, nullable=False)
+    temperature_imperial = db.Column(db.Integer, nullable=False)
+    humidity = db.Column(db.Integer, nullable=False)
     threshold_reached = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
@@ -116,8 +116,8 @@ class FloodThreshold(db.Model):
     favorite_city_id = db.Column(
         db.Integer, db.ForeignKey("favorite_city.id"), nullable=False
     )
-    precipitation_metric = db.Column(db.Float, nullable=False)
-    precipitation_imperial = db.Column(db.Float, nullable=False)
+    precipitation_metric = db.Column(db.Integer, nullable=False)
+    precipitation_imperial = db.Column(db.Integer, nullable=False)
     threshold_reached = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
