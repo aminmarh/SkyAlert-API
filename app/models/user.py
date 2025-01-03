@@ -21,6 +21,13 @@ class User(db.Model):
         cascade="all, delete-orphan",
     )
 
+    notification = db.relationship(
+        "Notification",
+        backref="user",
+        lazy="dynamic",
+        cascade="all, delete-orphan",
+    )
+
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
 
@@ -84,6 +91,7 @@ class StormThreshold(db.Model):
     wind_speed_imperial = db.Column(db.Float, nullable=False)
     gust_speed_metric = db.Column(db.Float, nullable=False)
     gust_speed_imperial = db.Column(db.Float, nullable=False)
+    threshold_reached = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
@@ -97,6 +105,7 @@ class HeatwaveThreshold(db.Model):
     temperature_metric = db.Column(db.Float, nullable=False)
     temperature_imperial = db.Column(db.Float, nullable=False)
     humidity = db.Column(db.Float, nullable=False)
+    threshold_reached = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
@@ -109,6 +118,7 @@ class FloodThreshold(db.Model):
     )
     precipitation_metric = db.Column(db.Float, nullable=False)
     precipitation_imperial = db.Column(db.Float, nullable=False)
+    threshold_reached = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)
 
 
@@ -121,3 +131,14 @@ class TokenBlocklist(db.Model):
         db.DateTime, default=datetime.datetime.utcnow, nullable=False
     )
     expires_at = db.Column(db.DateTime, nullable=False)
+
+
+class Notification(db.Model):
+    __tablename__ = "notification"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    title = db.Column(db.String(255), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    is_read = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.datetime.utcnow)

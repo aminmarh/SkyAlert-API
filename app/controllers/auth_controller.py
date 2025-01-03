@@ -1,7 +1,7 @@
 import random
 import datetime
 
-from flask import jsonify, request
+from flask import jsonify, request, current_app
 from flask_jwt_extended import (
     create_access_token,
     jwt_required,
@@ -426,6 +426,7 @@ def login():
         )
 
     access_token = create_access_token(identity=str(user.id), expires_delta=None)
+    current_app.config["USER_JWT_TOKEN"] = access_token
 
     return (
         jsonify(
