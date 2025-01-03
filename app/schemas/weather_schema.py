@@ -5,7 +5,7 @@ class CityNameType(fields.Str):
     def __init__(self, *args, **kwargs):
         kwargs["validate"] = [
             validate.Regexp(
-                r"^[^\d]+$",
+                r".*",
                 error=(
                     "City must contain only letters, numbers, spaces, or valid geographical symbols (-, +, .). "
                     "Special characters are not allowed."
