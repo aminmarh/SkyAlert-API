@@ -995,6 +995,7 @@ def get_cities_with_thresholds_and_thresholds_raw(user_id):
 
     cities_with_thresholds = (
         db.session.query(FavoriteCity)
+        .filter(FavoriteCity.user_id == user_id)
         .filter(
             db.or_(
                 FavoriteCity.storm_thresholds.any(),
@@ -1066,25 +1067,3 @@ def get_cities_with_thresholds_and_thresholds_raw(user_id):
         )
 
     return result
-
-
-@jwt_required()
-def get_cities_with_thresholds_and_thresholds():
-    """
-    Récupérer les villes avec leurs seuils associés.
-    """
-    user_id = get_jwt_identity()
-    try:
-        data = get_cities_with_thresholds_and_thresholds_raw(user_id)
-        return (
-            jsonify(
-                {
-                    "status": "success",
-                    "data": data,
-                    "message": "Cities with thresholds and their data retrieved successfully",
-                }
-            ),
-            200,
-        )
-    except ValueError as e:
-        return jsonify({"status": "error", "message": str(e)}), 404

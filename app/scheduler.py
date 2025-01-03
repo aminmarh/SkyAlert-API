@@ -1,6 +1,5 @@
 import atexit
 
-from flask_jwt_extended import decode_token
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -171,6 +170,30 @@ def handle_flood_threshold(city, details, weather_data, user_id, is_metric):
     return None
 
 
+def get_all_users_and_thresholds():
+    """
+    Récupérer tous les utilisateurs et leurs seuils associés.
+    """
+    users = User.query.all()
+    result = []
+
+    for user in users:
+        try:
+            data = get_cities_with_thresholds_and_thresholds_raw(user.id)
+            result.append(
+                {
+                    "user_id": user.id,
+                    "preferences": user.preferences.lower(),
+                    "data": data,
+                }
+            )
+        except ValueError:
+            # Ignore users with no thresholds
+            continue
+
+    return result
+
+
 def compare_weather_and_thresholds(app):
     """
     Tâche principale pour comparer les données météo avec les seuils.
@@ -178,56 +201,69 @@ def compare_weather_and_thresholds(app):
     with app.app_context():
         app.logger.info("Executing compare_weather_and_thresholds task...")
 
-        token = app.config.get("USER_JWT_TOKEN")
-        if not token:
-            app.logger.error("No JWT token found. Task cannot proceed.")
+        users_data = get_all_users_and_thresholds()
+        if not users_data:
+            app.logger.info(
+                "No users with thresholds found. Task will wait for next execution."
+            )
             return
 
-        try:
-            user_id = decode_token(token).get("sub")
-        except Exception as e:
-            app.logger.error(f"Error decoding JWT token: {str(e)}")
-            return
+        for user_data in users_data:
+            user_id = user_data["user_id"]
+            is_metric = user_data["preferences"] == "metric"
+            cities = user_data["data"]
 
-        user = User.query.get(user_id)
-        if not user:
-            app.logger.error(f"User with ID {user_id} not found.")
-            return
-        is_metric = user.preferences.lower() == "metric"
-
-        try:
-            cities = get_cities_with_thresholds_and_thresholds_raw(user_id)
-        except ValueError as e:
-            app.logger.error(f"Error fetching thresholds: {str(e)}")
-            return
-
-        for city in cities:
-            city_name = city["city_name"]
-            weather_data = fetch_weather_data(city_name, is_metric)
-            if "error" in weather_data:
-                app.logger.error(
-                    f"Failed to fetch weather data for {city_name}: {weather_data['error']}"
+            if not cities:
+                app.logger.info(
+                    f"No thresholds configured for user ID {user_id}. Skipping this user."
                 )
                 continue
 
-            for threshold in city["thresholds"]:
-                if threshold["type"] == "storm":
-                    message = handle_storm_threshold(
-                        city, threshold["details"], weather_data, user_id, is_metric
-                    )
-                elif threshold["type"] == "heatwave":
-                    message = handle_heatwave_threshold(
-                        city, threshold["details"], weather_data, user_id, is_metric
-                    )
-                elif threshold["type"] == "flood":
-                    message = handle_flood_threshold(
-                        city, threshold["details"], weather_data, user_id, is_metric
-                    )
-                else:
-                    message = f"Unknown threshold type: {threshold['type']}."
+            for city in cities:
+                city_name = city["city_name"]
+                thresholds = city["thresholds"]
 
-                if message:
-                    app.logger.info(message)
+                app.logger.info(
+                    f"Processing city {city_name} for user ID {user_id} with thresholds: {thresholds}"
+                )
+
+                if not thresholds:
+                    app.logger.info(
+                        f"No thresholds found for city {city_name} (user ID: {user_id}). Skipping this city."
+                    )
+                    continue
+
+                weather_data = fetch_weather_data(city_name, is_metric)
+                app.logger.info(f"Weather data for city {city_name}: {weather_data}")
+
+                if "error" in weather_data:
+                    app.logger.error(
+                        f"Failed to fetch weather data for {city_name}: {weather_data['error']}"
+                    )
+                    continue
+
+                for threshold in city["thresholds"]:
+                    app.logger.info(
+                        f"Comparing weather data with threshold: {threshold}"
+                    )
+                    if threshold["type"] == "storm":
+                        message = handle_storm_threshold(
+                            city, threshold["details"], weather_data, user_id, is_metric
+                        )
+                    elif threshold["type"] == "heatwave":
+                        message = handle_heatwave_threshold(
+                            city, threshold["details"], weather_data, user_id, is_metric
+                        )
+                    elif threshold["type"] == "flood":
+                        message = handle_flood_threshold(
+                            city, threshold["details"], weather_data, user_id, is_metric
+                        )
+                    else:
+                        message = f"Unknown threshold type: {threshold['type']}."
+
+                    if message:
+                        app.logger.info(message)
+
         app.logger.info("Completed execution of compare_weather_and_thresholds task.")
 
 
@@ -246,9 +282,9 @@ def start_scheduler(app):
 
     scheduler.add_job(
         func=lambda: compare_weather_and_thresholds(app),
-        trigger=IntervalTrigger(seconds=15),
+        trigger=IntervalTrigger(seconds=5),
         id="compare_weather_and_thresholds",
-        name="Compare weather data with thresholds every 15 seconds",
+        name="Compare weather data with thresholds every 30 seconds",
         replace_existing=True,
     )
 

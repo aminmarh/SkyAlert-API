@@ -1,6 +1,6 @@
 import logging
 
-from flask import Flask, request
+from flask import Flask
 from flask_cors import CORS
 from flasgger import Swagger
 
@@ -68,12 +68,6 @@ def create_app():
     init_routes(app)
 
     with app.app_context():
-
-        @app.after_request
-        def start_scheduler_after_login(response):
-            if request.endpoint == "auth.login" and response.status_code == 200:
-                app.logger.info("User logged in successfully. Starting scheduler...")
-                start_scheduler(app)
-            return response
+        start_scheduler(app)
 
     return app
