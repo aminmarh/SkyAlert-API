@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow import ValidationError
 
 from app.extensions import db
-from app.models.user import FavoriteCity
+from app.models.database_model import FavoriteCity
 from app.schemas.favorite_schema import AddFavoriteCitySchema, DeleteFavoriteCitySchema
 
 

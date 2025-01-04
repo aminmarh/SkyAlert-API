@@ -5,8 +5,13 @@ from apscheduler.triggers.interval import IntervalTrigger
 
 from app.extensions import db
 from app.helpers.generic_helper import create_notification
-from app.helpers.weather import WeatherAPI
-from app.models.user import User, StormThreshold, HeatwaveThreshold, FloodThreshold
+from app.helpers.weather_helper import WeatherAPI
+from app.models.database_model import (
+    User,
+    StormThreshold,
+    HeatwaveThreshold,
+    FloodThreshold,
+)
 from app.controllers.threshold_controller import (
     get_cities_with_thresholds_and_thresholds_raw,
 )

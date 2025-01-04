@@ -1,5 +1,5 @@
 from app.extensions import db
-from app.models.user import Notification
+from app.models.database_model import Notification
 
 
 def convert_units(value, from_unit, to_unit, unit_type):

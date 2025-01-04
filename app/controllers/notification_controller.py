@@ -6,7 +6,7 @@ from flask_jwt_extended import (
 )
 
 from app.extensions import db
-from app.models.user import User, Notification
+from app.models.database_model import User, Notification
 from app.schemas.notification_schema import MarkAsReadSchema, DeleteNotificationSchema
 
 

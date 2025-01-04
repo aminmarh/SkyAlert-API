@@ -12,8 +12,8 @@ from marshmallow import ValidationError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from app.extensions import db, add_token_to_blacklist
-from app.helpers.email import Email
-from app.models.user import User, ResetCode
+from app.helpers.email_helper import Email
+from app.models.database_model import User, ResetCode
 from app.schemas.auth_schema import (
     RegisterSchema,
     LoginSchema,
