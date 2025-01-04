@@ -7,8 +7,9 @@ class UsernameType(fields.Str):
             r"^[a-zA-Z\s]+$",
             error="Username must be a string containing only letters and spaces",
         )
-        kwargs["description"] = "Username of the user"
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args, metadata={"description": "Username of the user"}, **kwargs
+        )
 
 
 class PasswordType(fields.Str):
@@ -29,14 +30,16 @@ class PasswordType(fields.Str):
                 error="Password must not contain spaces or emojis",
             ),
         ]
-        kwargs["description"] = "Password of the user"
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args, metadata={"description": "Password of the user"}, **kwargs
+        )
 
 
 class EmailType(fields.Email):
     def __init__(self, *args, **kwargs):
-        kwargs["description"] = "Email address of the user"
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args, metadata={"description": "Email address of the user"}, **kwargs
+        )
 
 
 class CodeType(fields.Str):
@@ -45,8 +48,11 @@ class CodeType(fields.Str):
             validate.Length(min=6, max=6, error="Code must be 6 digits long"),
             validate.Regexp(r"^\d+$", error="Code must contain only digits"),
         ]
-        kwargs["description"] = "Verification code sent to the user"
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args,
+            metadata={"description": "Verification code sent to the user"},
+            **kwargs
+        )
 
 
 class PreferencesType(fields.Str):
@@ -55,10 +61,13 @@ class PreferencesType(fields.Str):
             ["metric", "imperial"],
             error="Preferences must be either 'metric' or 'imperial'",
         )
-        kwargs["description"] = (
-            "User preferences for measurement units (metric or imperial)"
+        super().__init__(
+            *args,
+            metadata={
+                "description": "User preferences for measurement units (metric or imperial)"
+            },
+            **kwargs
         )
-        super().__init__(*args, **kwargs)
 
 
 class RegisterSchema(Schema):

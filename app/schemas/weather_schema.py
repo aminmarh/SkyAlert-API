@@ -12,11 +12,16 @@ class CityNameType(fields.Str):
                 ),
             )
         ]
-        kwargs["description"] = (
-            "Name of the city (letters, numbers, and spaces only) or geographical coordinates "
-            "in the format 'latitude longitude' (e.g., '48.8566 2.3522'). Special characters are not allowed."
+        super().__init__(
+            *args,
+            metadata={
+                "description": (
+                    "Name of the city (letters, numbers, and spaces only) or geographical coordinates "
+                    "in the format 'latitude longitude' (e.g., '48.8566 2.3522'). Special characters are not allowed."
+                )
+            },
+            **kwargs
         )
-        super().__init__(*args, **kwargs)
 
 
 class PositiveIntType(fields.Int):
@@ -25,8 +30,9 @@ class PositiveIntType(fields.Int):
             [1, 2, 3],
             error="Days must be either 1, 2 or 3",
         )
-        kwargs["description"] = kwargs.get("description", "Positive int value")
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args, metadata={"description": "Positive int value"}, **kwargs
+        )
 
 
 class WeatherRequestSchema(Schema):

@@ -11,8 +11,7 @@ class CityNameType(fields.Str):
                 error="City name must be a string containing only letters and spaces",
             )
         ]
-        kwargs["description"] = "Name of the city"
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, metadata={"description": "Name of the city"}, **kwargs)
 
 
 class AddFavoriteCitySchema(Schema):
