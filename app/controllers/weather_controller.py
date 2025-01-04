@@ -2,8 +2,8 @@ from flask import jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from marshmallow.exceptions import ValidationError
 
-from app.helpers.weather import WeatherAPI
-from app.models.user import User
+from app.helpers.weather_helper import WeatherAPI
+from app.models.database_model import User
 from app.schemas.weather_schema import WeatherRequestSchema, SearchLocationSchema
 
 

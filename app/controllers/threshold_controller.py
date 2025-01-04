@@ -4,7 +4,7 @@ from marshmallow import ValidationError
 
 from app.extensions import db
 from app.helpers.generic_helper import convert_units
-from app.models.user import (
+from app.models.database_model import (
     User,
     FavoriteCity,
     StormThreshold,
