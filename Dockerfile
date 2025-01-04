@@ -1,6 +1,6 @@
 FROM python:3.9-slim
 
-RUN apt-get -q -y update 
+RUN apt-get -q -y update && apt-get install -y dos2unix
 RUN apt-get install -y gcc
 
 ENV USERNAME=skyalert-app
@@ -26,6 +26,7 @@ RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
 
 ENV FLASK_APP=app:create_app
+RUN dos2unix service_entrypoint.sh
 RUN chmod +x service_entrypoint.sh
 
 EXPOSE 5000
