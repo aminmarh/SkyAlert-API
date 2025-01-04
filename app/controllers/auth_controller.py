@@ -28,7 +28,7 @@ from app.schemas.auth_schema import (
 
 def register():
     """
-    Register a new user
+    Inscrire un nouvel utilisateur.
     ---
     tags:
       - Authentification
@@ -329,7 +329,7 @@ def verif_mail():
 
 def login():
     """
-    Logging in a user
+    Connexion d'un utilisateur
     ---
     tags:
       - Authentification
@@ -442,7 +442,7 @@ def login():
 @jwt_required()
 def logout():
     """
-    Log out a user
+    Déconnexion de l'utilisateur
     ---
     tags:
       - Authentification
@@ -576,7 +576,6 @@ def update_user():
               type: object
               example: {"email": ["Not a valid email address"]}
       404:
-        description: User not found
         schema:
           type: object
           properties:
@@ -691,7 +690,7 @@ def update_user():
 @jwt_required()
 def update_password():
     """
-    Update user password
+    Mettre à jour le mot de passe de l'utilisateur.
     ---
     tags:
       - Authentification

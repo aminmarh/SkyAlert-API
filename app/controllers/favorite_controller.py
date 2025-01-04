@@ -10,7 +10,7 @@ from app.schemas.favorite_schema import AddFavoriteCitySchema, DeleteFavoriteCit
 @jwt_required()
 def add_favorite_city():
     """
-    Add a city to the user's favorite list.
+    Ajouter une ville à la liste des villes favorites de l'utilisateur.
     ---
     tags:
       - Favorite Cities
@@ -120,7 +120,7 @@ def add_favorite_city():
 @jwt_required()
 def remove_favorite_city():
     """
-    Remove a city from the user's favorite list.
+    Supprimer une ville de la liste des villes favorites de l'utilisateur.
     ---
     tags:
       - Favorite Cities
@@ -226,7 +226,7 @@ def remove_favorite_city():
 @jwt_required()
 def get_favorite_cities():
     """
-    Get the user's list of favorite cities.
+    Récupérer la liste des villes favorites de l'utilisateur.
     ---
     tags:
       - Favorite Cities

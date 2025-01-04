@@ -41,16 +41,15 @@ def create_storm_threshold():
               description: ID of the favorite city
               example: 1
             wind_speed:
-              type: float
+              type: integer
               description: Minimum wind speed
-              example: 70.0
+              example: 70
             gust_speed:
-              type: float
+              type: integer
               description: Minimum gust speed
-              example: 100.0
+              example: 100
     responses:
       201:
-        description: Storm threshold created successfully
         schema:
           type: object
           properties:
@@ -64,17 +63,17 @@ def create_storm_threshold():
                   type: integer
                   example: 1
                 wind_speed_metric:
-                  type: float
-                  example: 70.0
+                  type: integer
+                  example: 70
                 gust_speed_metric:
-                  type: float
-                  example: 100.0
+                  type: integer
+                  example: 100
                 wind_speed_imperial:
-                  type: float
-                  example: 43.496
+                  type: integer
+                  example: 43
                 gust_speed_imperial:
-                  type: float
-                  example: 62.1371
+                  type: integer
+                  example: 62
             message:
               type: string
               example: Storm threshold created successfully
@@ -226,9 +225,9 @@ def create_flood_threshold():
                 description: ID the favorite city
                 example: 1
               precipitation:
-                type: float
+                type: integer
                 description: Minimum precipitation
-                example: 50.0
+                example: 50
     responses:
       201:
         schema:
@@ -244,11 +243,11 @@ def create_flood_threshold():
                   type: integer
                   example: 1
                 precipitation_metric:
-                  type: float
-                  example: 50.0
+                  type: integer
+                  example: 50
                 precipitation_imperial:
-                  type: float
-                  example: 1.9685
+                  type: integer
+                  example: 1
             message:
               type: string
               example: Flood threshold created successfully
@@ -391,13 +390,13 @@ def create_heatwave_threshold():
                 description: ID the favorite city
                 example: 1
               temperature:
-                type: float
+                type: integer
                 description: Minimum temperature
-                example: 40.0
+                example: 40
               humidity:
-                type: float
+                type: integer
                 description: Minimum humidity
-                example: 80.0
+                example: 80
     responses:
       201:
         schema:
@@ -413,14 +412,14 @@ def create_heatwave_threshold():
                   type: integer
                   example: 1
                 temperature_metric:
-                  type: float
-                  example: 35.0
+                  type: integer
+                  example: 35
                 temperature_imperial:
-                  type: float
-                  example: 95.0
+                  type: integer
+                  example: 95
                 humidity:
-                  type: float
-                  example: 80.0
+                  type: integer
+                  example: 80
             message:
               type: string
               example: HeatWave threshold created successfully
@@ -750,9 +749,9 @@ def get_thresholds():
                       id:
                         type: integer
                       wind_speed:
-                        type: float
+                        type: integer
                       gust_speed:
-                        type: float
+                        type: integer
                       created_at:
                         type: string
                         format: date-time
@@ -764,9 +763,9 @@ def get_thresholds():
                       id:
                         type: integer
                       temperature:
-                        type: float
+                        type: integer
                       humidity:
-                        type: float
+                        type: integer
                       created_at:
                         type: string
                         format: date-time
@@ -778,7 +777,7 @@ def get_thresholds():
                       id:
                         type: integer
                       precipitation:
-                        type: float
+                        type: integer
                       created_at:
                         type: string
                         format: date-time
