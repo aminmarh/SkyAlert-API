@@ -6,8 +6,9 @@ class NotificationIDType(fields.Int):
         kwargs["validate"] = validate.Range(
             min=1, error="Notification ID must be a positive integer"
         )
-        kwargs["description"] = "ID of the notification"
-        super().__init__(*args, **kwargs)
+        super().__init__(
+            *args, metadata={"description": "ID of the notification"}, **kwargs
+        )
 
 
 class MarkAsReadSchema(Schema):
