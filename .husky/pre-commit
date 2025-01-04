@@ -1,1 +1,15 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+if [ "$SKIP_TESTS" == 1 ]; then
+  echo "Skipping tests..."
+else
+  echo "Running tests..."
+  coverage run -m pytest
+  if [ $? -ne 0 ]; then
+    echo "Tests failed. Aborting commit."
+    exit 1
+  fi
+fi
+
 npx lint-staged

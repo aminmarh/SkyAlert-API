@@ -2,7 +2,8 @@
   "scripts": {
     "prepare": "husky",
     "commit": "git-cz",
-    "clean": "black . && flake8 . && prettier --write \"**/*.{js,css,html,json,md}\""
+    "clean": "black . && flake8 . && prettier --write \"**/*.{js,css,html,json,md}\"",
+    "test:pre-commit": "coverage run -m pytest && coverage report"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.6.0",
