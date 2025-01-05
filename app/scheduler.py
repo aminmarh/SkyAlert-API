@@ -64,7 +64,7 @@ def handle_storm_threshold(city, details, weather_data, user_id, is_metric):
     )
     wind_unit = "km/h" if is_metric else "mph"
 
-    if wind_speed >= details["wind_speed"] or gust_speed >= details["gust_speed"]:
+    if wind_speed >= details["wind_speed"] and gust_speed >= details["gust_speed"]:
         storm_threshold.threshold_reached = True
         db.session.delete(storm_threshold)
         db.session.commit()
