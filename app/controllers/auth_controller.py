@@ -245,19 +245,6 @@ def verif_mail():
               type: object
               example: {"email": ["Not a valid email address"],
                 "code": ["Length must be between 6 and 6."]}
-      401:
-        schema:
-          type: object
-          properties:
-            status:
-              type: string
-              example: "error"
-            data:
-              type: object
-              example: null
-            message:
-              type: string
-              example: "Invalid or expired code"
       410:
         schema:
           type: object
@@ -297,7 +284,7 @@ def verif_mail():
             jsonify(
                 {"status": "error", "data": None, "message": "Invalid or expired code"}
             ),
-            401,
+            400,
         )
 
     time_elapsed = datetime.datetime.utcnow() - reset_code.created_at
@@ -395,6 +382,9 @@ def login():
             message:
               type: string
               example: "Invalid credentials"
+            code:
+              type: string
+              example: "INVALID_CREDENTIALS"
     """
     data = request.json
 
@@ -420,7 +410,12 @@ def login():
     if not user or not user.check_password(password):
         return (
             jsonify(
-                {"status": "error", "data": None, "message": "Invalid credentials"}
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "Invalid credentials",
+                    "code": "INVALID_CREDENTIALS",
+                }
             ),
             401,
         )
@@ -741,7 +736,7 @@ def update_password():
             errors:
               type: object
               example: {"new_password": ["Shorter than minimum length 6"]}
-      401:
+      403:
         schema:
           type: object
           properties:
@@ -786,7 +781,7 @@ def update_password():
                     "message": "Current password is incorrect",
                 }
             ),
-            401,
+            403,
         )
 
     user.set_password(new_password)
@@ -997,19 +992,6 @@ def verify_reset_code():
             errors:
               type: object
               example: {"email": ["Not a valid email address"], "code": ["Length must be between 6 and 6."]}
-      401:
-        schema:
-          type: object
-          properties:
-            status:
-              type: string
-              example: "error"
-            data:
-              type: object
-              example: null
-            message:
-              type: string
-              example: "Invalid or expired code"
       410:
         schema:
           type: object
@@ -1048,7 +1030,7 @@ def verify_reset_code():
             jsonify(
                 {"status": "error", "data": None, "message": "Invalid or expired code"}
             ),
-            401,
+            400,
         )
 
     time_elapsed = datetime.datetime.utcnow() - reset_code.created_at
@@ -1123,19 +1105,6 @@ def reset_password():
               example: {"email": ["Not a valid email address"],
                 "code": ["Length must be between 6 and 6."],
                 "new_password": ["Length must be at least 6."]}
-      401:
-        schema:
-          type: object
-          properties:
-            status:
-              type: string
-              example: "error"
-            data:
-              type: object
-              example: null
-            message:
-              type: string
-              example: "Invalid or expired code"
       404:
         schema:
           type: object
@@ -1174,7 +1143,7 @@ def reset_password():
             jsonify(
                 {"status": "error", "data": None, "message": "Invalid or expired code"}
             ),
-            401,
+            400,
         )
 
     user = User.query.filter_by(email=email).first()
