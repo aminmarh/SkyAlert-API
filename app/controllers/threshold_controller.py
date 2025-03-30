@@ -667,17 +667,6 @@ def delete_threshold():
         threshold = FloodThreshold.query.filter_by(
             id=threshold_id, favorite_city_id=favorite_city_id
         ).first()
-    else:
-        return (
-            jsonify(
-                {
-                    "status": "error",
-                    "data": None,
-                    "message": "Invalid threshold type",
-                }
-            ),
-            400,
-        )
 
     if not threshold:
         return (

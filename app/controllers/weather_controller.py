@@ -81,6 +81,11 @@ def get_forecast():
     """
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
+    if not user:
+        return (
+            jsonify({"status": "error", "data": None, "message": "User not found"}),
+            404,
+        )
     preferences = user.preferences if user else "metric"
 
     data = request.json
@@ -98,7 +103,20 @@ def get_forecast():
     city = validated_data["city"]
     days = validated_data["days"]
 
-    forecast = WeatherAPI.get_forecast(city, days, preferences)
+    try:
+        forecast = WeatherAPI.get_forecast(city, days, preferences)
+    except Exception as e:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "An error occurred while retrieving the forecast",
+                    "errors": str(e),
+                }
+            ),
+            500,
+        )
 
     return (
         jsonify(
@@ -193,7 +211,20 @@ def search_location():
 
     query = validated_data["query"]
 
-    city = WeatherAPI.location_search(query)
+    try:
+        city = WeatherAPI.location_search(query)
+    except Exception as e:
+        return (
+            jsonify(
+                {
+                    "status": "error",
+                    "data": None,
+                    "message": "An error occurred while retrieving the location",
+                    "errors": str(e),
+                }
+            ),
+            500,
+        )
 
     return (
         jsonify(
