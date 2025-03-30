@@ -123,7 +123,7 @@ def register():
         )
 
     username = validated_data["username"]
-    email = validated_data["email"]
+    email = validated_data["email"].strip().lower()
 
     if User.query.filter_by(email=email).first():
         return (
