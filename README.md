@@ -1,7 +1,7 @@
 +++
 # SkyAlert API
 
-SkyAlert API est un projet conçu pour offrir des fonctionnalités météorologiques, y compris des notifications personnalisées basées sur des seuils définis par l'utilisateur.
+SkyAlert API is a project designed to provide weather-related features, including personalized notifications based on user-defined thresholds.
 
 ## Team Members
 - [Marheraroui Amin](https://github.com/aminmarh)
@@ -11,40 +11,41 @@ SkyAlert API est un projet conçu pour offrir des fonctionnalités météorologi
 ---
 
 ## Prerequisites
-Avant de commencer, assurez-vous d'avoir les outils suivants installés :
-- [Python 3.10+](https://www.python.org/downloads/)
+Before getting started, make sure you have the following tools installed:
+- [Python 3.9.6](https://www.python.org/downloads/release/python-396/)
 - [Docker](https://www.docker.com/)
 - [Git](https://git-scm.com/)
 
 ---
 
-## Technologies et Outils Utilisés
+## Technologies & Tools Used
 
 ### **1. Backend**
-- **Flask** : Framework web principal pour gérer les APIs et la logique backend.
-- **Flask-JWT-Extended** : Pour la gestion des tokens JWT, sécurisant les endpoints.
-- **Flask-Migrate** : Pour gérer les migrations de base de données.
-- **Flask-SQLAlchemy** : ORM (Object Relational Mapping) utilisé pour interagir avec PostgreSQL.
-- **Flasgger** : Pour générer automatiquement la documentation Swagger des APIs.
-- **APScheduler** : Permet de planifier des tâches périodiques comme la comparaison des données météorologiques avec les seuils.
+- **Flask**: Main web framework used to manage APIs and backend logic.
+- **Flask-JWT-Extended**: Handles JWT token management and secures endpoints.
+- **Flask-Migrate**: Manages database migrations.
+- **Flask-SQLAlchemy**: ORM used to interact with PostgreSQL.
+- **Flasgger**: Automatically generates Swagger API documentation.
+- **APScheduler**: Schedules periodic tasks such as comparing weather data with user thresholds.
 
-### **2. Base de Données**
-- **PostgreSQL** : Base de données relationnelle utilisée pour stocker les utilisateurs, les villes favorites, les seuils et les notifications.
+### **2. Database**
+- **PostgreSQL**: Relational database used to store users, favorite cities, thresholds, and notifications.
 
 ### **3. Notifications**
-- **Fichier Notification Customisé** : Les notifications sont également stockées dans la base de données et récupérables via une API REST.
+- **Custom Notification File**: Notifications are stored in the database and can be retrieved via REST API.
 
-### **4. Structuration et Qualité**
-- **Blueprints** : Organisation modulaire des routes (authentification, météo, seuils, notifications).
-- **Swagger** : Documentation complète des APIs via `/apidocs/`.
-- **Tests** : Structuré pour inclure des tests unitaires et d'intégration.
-- **Flake8** et **Black** : Respect des standards de code Python.
-- **Schemas Marshmallow** : Toutes les données saisies par les utilisateurs ou reçues d'une API sont validées et typées grâce à des schémas définis avec **Marshmallow**.
+### **4. Structure & Code Quality**
+- **Blueprints**: Modular route organization (auth, weather, thresholds, notifications).
+- **Swagger**: Full API documentation available at `/apidocs/`.
+- **Flake8** and **Black**: Code formatting and linting tools.
+- **Marshmallow Schemas**: All data input by users or received from external APIs is validated and typed using **Marshmallow**.
+- **Tests**: Structured to include both unit and integration tests.
 
 ---
 
 ## Cloning the Project
-Clonez ce projet en utilisant la commande suivante :
+
+Clone this repository with the following command:
 
 ```bash
 git clone git@github.com:aminmarh/SkyAlert-API.git
@@ -53,8 +54,9 @@ cd SkyAlert-API
 
 ---
 
-## Fichier `.env`
-Le projet utilise un fichier `.env` pour stocker les informations sensibles. Voici un exemple :
+## `.env` File
+
+The project uses a `.env` file to store sensitive information. Here's an example:
 
 ```
 FLASK_APP=run.py
@@ -81,47 +83,41 @@ SCHEDULER_API_ENABLED=True
 
 ## Using Docker
 
-### Étapes pour Exécuter le Projet avec Docker
+### Steps to Run the Project with Docker
 
-**Docker lance automatiquement trois services :**
-1. **Base de données PostgreSQL :**
-   - Service `db` basé sur l'image PostgreSQL.
-   - Accessible sur le port `5123`.
-   - Utilise un volume local `./pData` pour la persistance des données.
+**Docker launches three services automatically:**
 
-2. **Application Backend :**
-   - Service `app` qui exécute l'application Flask.
-   - Disponible sur le port `5000`.
-   - Dépend du service `db`.
+1. **PostgreSQL Database:**
+   - Service `db` based on the official PostgreSQL image.
+   - Exposed on port `5123`.
+   - Uses local volume `./pData` for data persistence.
 
-3. **Adminer :**
-   - Service `adminer` pour gérer facilement la base de données via une interface web.
-   - Disponible sur le port `8080`.
+2. **Backend Application:**
+   - Service `app` that runs the Flask backend.
+   - Exposed on port `5000`.
+   - Depends on the `db` service.
 
-**Construire les conteneurs :**
+3. **Adminer:**
+   - Service `adminer` provides a user interface to interact with the database.
+   - Exposed on port `8080`.
 
-```bash
-docker-compose build
-```
-
-**Démarrer les conteneurs :**
+**Build and run the containers:**
 
 ```bash
-docker-compose up
+docker-compose up --build
 ```
 
-**Accéder aux services :**
-- **Application Backend :** [http://localhost:5000](http://localhost:5000)
-- **Adminer :** [http://localhost:8080](http://localhost:8080)
+**Access the services:**
+- **Backend API:** [http://localhost:5000/apidocs](http://localhost:5000/apidocs)
+- **Adminer UI:** [http://localhost:8080](http://localhost:8080)
 
 ---
 
-## Tester l'application en entier
+## Full App Testing
 
-Pour tester l'application dans son intégralité, vous devez également cloner et exécuter le frontend associé au projet. Vous pouvez trouver le repository du frontend ici :  
+To test the full application, you also need to clone and run the frontend project. You can find the frontend repository here:  
 [SkyAlert Frontend Repository](https://github.com/aminmarh/SkyAlert-UI)
 
-Suivez les instructions fournies dans le fichier `README.md` du repository frontend pour configurer et exécuter le frontend. Une fois le frontend et le backend correctement configurés et démarrés, vous pourrez interagir avec l'application complète.
+Follow the instructions in the `README.md` file of the frontend repository to set it up and run it. Once both frontend and backend are up and running, you'll be able to interact with the complete application.
 
 ---
-+++
